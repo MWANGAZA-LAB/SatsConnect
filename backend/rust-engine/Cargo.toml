@@ -41,7 +41,7 @@ prost-types = "0.13"
 
 # Crypto/seed
 bip39 = { version = "2", default-features = false, features = ["std", "rand"] }
-rand = "0.8"
+rand = "0.9"
 sha2 = "0.10"
 aes-gcm = "0.10"
 base64 = "0.22"
