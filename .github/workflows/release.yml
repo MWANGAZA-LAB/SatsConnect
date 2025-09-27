@@ -50,7 +50,7 @@ jobs:
           - **React Native App**: Mobile wallet interface
           
           ### Installation
-          See [README.md](./README.md) for detailed setup instructions.
+          See [SatsConnect Documentation](./README.md) for detailed setup instructions.
         draft: false
         prerelease: false
 
