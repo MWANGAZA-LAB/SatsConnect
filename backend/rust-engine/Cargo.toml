@@ -47,7 +47,7 @@ aes-gcm = "0.10"
 base64 = "0.22"
 
 # Filesystem
-directories = "5"
+directories = "6"
 
 # Additional dependencies needed
 uuid = { version = "1.0", features = ["v4"] }
