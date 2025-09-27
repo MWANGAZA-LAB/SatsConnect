@@ -261,7 +261,7 @@ export default function Home() {
         {/* Error Display */}
         {walletState.error && (
           <Card style={styles.errorCard}>
-            <Text style={styles.errorText}>{walletState.error}</Text>
+            <Text style={styles.errorMessage}>{walletState.error}</Text>
             <Button
               title="Retry"
               onPress={() => walletService.clearError()}
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.error,
     borderWidth: 1,
   },
-  errorText: {
+  errorMessage: {
     ...theme.typography.textStyles.body2,
     color: theme.colors.error,
     marginBottom: theme.spacing.sm,

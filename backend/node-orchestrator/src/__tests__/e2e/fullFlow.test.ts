@@ -24,37 +24,19 @@ describe('SatsConnect End-to-End Flow', () => {
   beforeAll(async () => {
     // Mock gRPC responses
     mockGrpcClientService.checkHealth.mockResolvedValue(true);
-    mockGrpcClientService.callGrpcService.mockImplementation(async (service, method, data) => {
-      switch (method) {
-        case 'CreateWallet':
-          return {
-            walletId: 'test-wallet-123',
-            nodeId: 'test-node-456',
-            mnemonic: 'test mnemonic phrase for testing purposes only',
-          };
-        case 'GetBalance':
-          return {
-            onchainBalance: 1000000,
-            lightningBalance: 500000,
-          };
-        case 'NewInvoice':
-          return {
-            invoice: 'lnbc1000n1p3k2v5cpp5test-invoice-hash',
-            paymentHash: 'test-payment-hash-123',
-          };
-        case 'SendPayment':
-          return {
-            paymentHash: 'test-payment-hash-456',
-            status: 'SUCCEEDED',
-          };
-        case 'BuyAirtime':
-          return {
-            transactionId: 'airtime-tx-123',
-            status: 'PENDING',
-          };
-        default:
-          throw new Error(`Unknown method: ${method}`);
-      }
+    mockGrpcClientService.getClients.mockReturnValue({
+      walletClient: {
+        CreateWallet: jest.fn(),
+        GetBalance: jest.fn(),
+        NewInvoice: jest.fn(),
+        SendPayment: jest.fn(),
+        BuyAirtime: jest.fn(),
+      },
+      paymentClient: {
+        ProcessPayment: jest.fn(),
+        GetPaymentStatus: jest.fn(),
+        ProcessRefund: jest.fn(),
+      },
     });
   });
 
@@ -216,12 +198,15 @@ describe('SatsConnect End-to-End Flow', () => {
     it('should handle gRPC service failures with retry', async () => {
       // Mock gRPC service to fail first, then succeed
       let callCount = 0;
-      mockGrpcClientService.callGrpcService.mockImplementation(async () => {
+      mockGrpcClientService.getClients.mockImplementation(() => {
         callCount++;
         if (callCount <= 2) {
           throw new Error('gRPC service temporarily unavailable');
         }
-        return { walletId: 'retry-success-wallet' };
+        return {
+          walletClient: { CreateWallet: jest.fn() },
+          paymentClient: { ProcessPayment: jest.fn() },
+        };
       });
 
       // This should succeed after retries

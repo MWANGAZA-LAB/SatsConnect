@@ -9,7 +9,7 @@ export interface QRCodeProps {
   color?: string;
   backgroundColor?: string;
   style?: ViewStyle;
-  logo?: React.ReactNode;
+  logo?: string;
   logoSize?: number;
   logoBackgroundColor?: string;
   logoMargin?: number;

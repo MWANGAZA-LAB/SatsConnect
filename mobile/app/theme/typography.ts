@@ -31,71 +31,71 @@ export const typography = {
   
   // Font weights
   fontWeight: {
-    light: '300',
-    normal: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
-    extrabold: '800',
+    light: '300' as const,
+    normal: '400' as const,
+    medium: '500' as const,
+    semibold: '600' as const,
+    bold: '700' as const,
+    extrabold: '800' as const,
   },
   
   // Text styles
   textStyles: {
     h1: {
       fontSize: 36,
-      fontWeight: '700',
+      fontWeight: '700' as const,
       lineHeight: 1.2,
     },
     h2: {
       fontSize: 30,
-      fontWeight: '600',
+      fontWeight: '600' as const,
       lineHeight: 1.3,
     },
     h3: {
       fontSize: 24,
-      fontWeight: '600',
+      fontWeight: '600' as const,
       lineHeight: 1.3,
     },
     h4: {
       fontSize: 20,
-      fontWeight: '500',
+      fontWeight: '500' as const,
       lineHeight: 1.4,
     },
     h5: {
       fontSize: 18,
-      fontWeight: '500',
+      fontWeight: '500' as const,
       lineHeight: 1.4,
     },
     h6: {
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: '500' as const,
       lineHeight: 1.4,
     },
     body1: {
       fontSize: 16,
-      fontWeight: '400',
+      fontWeight: '400' as const,
       lineHeight: 1.5,
     },
     body2: {
       fontSize: 14,
-      fontWeight: '400',
+      fontWeight: '400' as const,
       lineHeight: 1.5,
     },
     caption: {
       fontSize: 12,
-      fontWeight: '400',
+      fontWeight: '400' as const,
       lineHeight: 1.4,
     },
     button: {
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: '500' as const,
       lineHeight: 1.4,
     },
     overline: {
       fontSize: 12,
-      fontWeight: '500',
+      fontWeight: '500' as const,
       lineHeight: 1.4,
-      textTransform: 'uppercase',
+      textTransform: 'uppercase' as const,
     },
   },
 };

@@ -57,7 +57,7 @@ export const Input: React.FC<InputProps> = ({
     error && styles.error,
     disabled && styles.disabled,
     style,
-  ];
+  ].filter((style): style is ViewStyle => Boolean(style));
 
   const inputStyleCombined = [
     styles.input,

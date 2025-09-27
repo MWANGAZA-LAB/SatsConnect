@@ -230,7 +230,7 @@ impl LightningEngine {
         online_peers
             .iter()
             .max_by(|a, b| a.1.success_rate.partial_cmp(&b.1.success_rate).unwrap())
-            .map(|(node_id, _)| node_id.clone())
+            .map(|(node_id, _)| (*node_id).clone())
     }
 
     pub async fn failover_to_next_peer(&self) -> Result<Option<String>> {

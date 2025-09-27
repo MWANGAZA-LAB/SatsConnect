@@ -7,8 +7,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { theme } from '../theme';
 
 export interface QRScannerProps {
@@ -22,17 +21,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({
   onClose,
   visible,
 }) => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-
-  useEffect(() => {
-    const getCameraPermissions = async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    };
-
-    getCameraPermissions();
-  }, []);
 
   const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
@@ -50,7 +40,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     return null;
   }
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>Requesting camera permission...</Text>
@@ -58,10 +48,13 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>No access to camera</Text>
+        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+          <Text style={styles.buttonText}>Request Permission</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={onClose}>
           <Text style={styles.buttonText}>Close</Text>
         </TouchableOpacity>
@@ -71,10 +64,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Camera
+      <CameraView
         style={styles.camera}
-        type={CameraType.back}
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        facing="back"
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
       >
         <View style={styles.overlay}>
           <View style={styles.topOverlay} />
@@ -99,7 +92,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({
             </Text>
           </View>
         </View>
-      </Camera>
+      </CameraView>
     </View>
   );
 };

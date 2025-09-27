@@ -58,7 +58,6 @@ class QueueService {
   constructor() {
     this.redis = new IORedis(config.redis.url, {
       password: config.redis.password,
-      retryDelayOnFailover: 100,
       maxRetriesPerRequest: 3,
     });
 

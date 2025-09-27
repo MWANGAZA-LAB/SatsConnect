@@ -136,4 +136,5 @@ app.listen(port, () => {
   console.log(`🔧 Environment: ${config.server.nodeEnv}`);
 });
 
+export { app };
 export default app;
