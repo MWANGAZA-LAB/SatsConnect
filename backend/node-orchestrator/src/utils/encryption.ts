@@ -45,7 +45,7 @@ export class EncryptionService {
       const tag = cipher.getAuthTag();
       
       // Combine salt + iv + tag + encrypted data
-      const combined = Buffer.concat([salt, iv, tag, Buffer.from(encrypted, 'hex')]);
+      const combined = Buffer.concat([salt, iv, tag, Buffer.from(encrypted, 'hex')] as Buffer[]);
       
       return combined.toString('base64');
     } catch (error) {

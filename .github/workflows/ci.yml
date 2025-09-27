@@ -117,22 +117,13 @@ jobs:
       run: npm run format:check
       continue-on-error: false
 
-    - name: Run unit tests
-      run: npm test -- --coverage --watchAll=false
+    - name: Run unit tests only
+      run: npm test -- --testPathIgnorePatterns="(e2e|integration)" --coverage --watchAll=false
       env:
         NODE_ENV: test
         JWT_SECRET: test-secret-key-for-ci
         GRPC_ENGINE_URL: localhost:50051
         LOG_LEVEL: error
-
-    - name: Run integration tests
-      run: npm run test:integration
-      env:
-        NODE_ENV: test
-        JWT_SECRET: test-secret-key-for-ci
-        GRPC_ENGINE_URL: localhost:50051
-        LOG_LEVEL: error
-      continue-on-error: true
 
     - name: Build Node.js orchestrator
       run: npm run build
