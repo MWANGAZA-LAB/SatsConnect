@@ -1,0 +1,77 @@
+[package]
+name = "satsconnect_rust_engine"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[lib]
+name = "satsconnect_rust_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "engine_server"
+path = "src/main.rs"
+
+[[bin]]
+name = "test_client"
+path = "test_client.rs"
+
+[[bin]]
+name = "test_payment_client"
+path = "test_payment_client.rs"
+
+[dependencies]
+anyhow = "1"
+thiserror = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+# gRPC
+tonic = { version = "0.12", features = ["transport"] }
+prost = "0.13"
+prost-types = "0.13"
+
+# Lightning Node (LDK Node) - temporarily disabled due to prost conflicts
+# ldk-node = "0.6"
+# bitcoin = "0.32"
+
+# Crypto/seed
+bip39 = { version = "2", default-features = false, features = ["std", "rand"] }
+rand = "0.8"
+sha2 = "0.10"
+aes-gcm = "0.10"
+base64 = "0.22"
+
+# Filesystem
+directories = "5"
+
+# Additional dependencies needed
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3"
+tokio-stream = "0.1"
+warp = "0.3"
+
+[build-dependencies]
+tonic-build = "0.12" 
+protoc-bin-vendored = "3"
+prost = "0.13"
+prost-types = "0.13"
+
+# Temporarily disabled due to prost conflicts
+# [package.metadata.tonic-build]
+# protos = ["proto/wallet.proto"]
+# out-dir = "src/proto"
+
+[features]
+# Choose network via feature flags; default to testnet
+regtest = []
+testnet = []
+
+
+
+

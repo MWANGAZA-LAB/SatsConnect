@@ -1,0 +1,48 @@
+syntax = "proto3";
+package satsconnect.wallet.v1;
+
+service WalletService {
+  rpc CreateWallet (CreateWalletRequest) returns (CreateWalletResponse);
+  rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
+  rpc NewInvoice (NewInvoiceRequest) returns (NewInvoiceResponse);
+  rpc SendPayment (SendPaymentRequest) returns (SendPaymentResponse);
+}
+
+message CreateWalletRequest {
+  // optional mnemonic; if empty, server generates and returns one
+  string mnemonic = 1;
+  // storage id or label for multiple wallets in future
+  string label = 2;
+}
+
+message CreateWalletResponse {
+  // SECURITY: Do not return mnemonic/seed
+  string node_id = 2; // hex pubkey
+  string address = 3; // on-chain address for funding (regtest/testnet)
+}
+
+message GetBalanceRequest {}
+
+message GetBalanceResponse {
+  uint64 confirmed_sats = 1;
+  uint64 lightning_sats = 2; // channel balance available
+}
+
+message NewInvoiceRequest {
+  uint64 amount_sats = 1; // 0 for amountless invoice
+  string memo = 2;
+}
+
+message NewInvoiceResponse {
+  string invoice = 1; // BOLT11
+  string payment_hash = 2;
+}
+
+message SendPaymentRequest {
+  string invoice = 1;
+}
+
+message SendPaymentResponse {
+  string payment_hash = 1;
+  string status = 2; // SUCCEEDED / PENDING / FAILED
+}

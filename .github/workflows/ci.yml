@@ -1,0 +1,382 @@
+name: SatsConnect CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+env:
+  RUST_VERSION: '1.75.0'
+  NODE_VERSION: '20'
+  EXPO_CLI_VERSION: 'latest'
+
+jobs:
+  # Phase 1: Rust gRPC Engine
+  rust-engine:
+    name: Rust gRPC Engine
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/rust-engine
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          backend/rust-engine/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Run cargo audit
+      run: cargo audit
+      continue-on-error: false
+
+    - name: Check Rust formatting
+      run: cargo fmt -- --check
+
+    - name: Run Clippy lints
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Build Rust engine
+      run: cargo build --release --verbose
+
+    - name: Run Rust tests
+      run: cargo test --all --verbose
+
+    - name: Upload Rust binary artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust-engine-binary
+        path: backend/rust-engine/target/release/
+        retention-days: 7
+
+  # Phase 2: Node.js Orchestrator
+  node-orchestrator:
+    name: Node.js Orchestrator
+    runs-on: ubuntu-latest
+    needs: rust-engine
+    defaults:
+      run:
+        working-directory: ./backend/node-orchestrator
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/node-orchestrator/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+
+    - name: Run npm audit
+      run: npm audit --audit-level=moderate
+      continue-on-error: false
+
+    - name: Check TypeScript compilation
+      run: npx tsc --noEmit
+
+    - name: Run ESLint
+      run: npm run lint
+      continue-on-error: false
+
+    - name: Run Prettier check
+      run: npm run format:check
+      continue-on-error: false
+
+    - name: Run unit tests
+      run: npm test -- --coverage --watchAll=false
+      env:
+        NODE_ENV: test
+        JWT_SECRET: test-secret-key-for-ci
+        GRPC_ENGINE_URL: localhost:50051
+        LOG_LEVEL: error
+
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        NODE_ENV: test
+        JWT_SECRET: test-secret-key-for-ci
+        GRPC_ENGINE_URL: localhost:50051
+        LOG_LEVEL: error
+      continue-on-error: true
+
+    - name: Build Node.js orchestrator
+      run: npm run build
+
+    - name: Upload Node.js artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: node-orchestrator-dist
+        path: backend/node-orchestrator/dist/
+        retention-days: 7
+
+  # Phase 3: React Native Mobile App
+  react-native-app:
+    name: React Native Mobile App
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mobile
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: mobile/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+
+    - name: Run npm audit
+      run: npm audit --audit-level=moderate
+      continue-on-error: false
+
+    - name: Install Expo CLI
+      run: npm install -g @expo/cli@${{ env.EXPO_CLI_VERSION }}
+
+    - name: Check TypeScript compilation
+      run: npx tsc --noEmit
+      continue-on-error: false
+
+    - name: Run ESLint
+      run: npm run lint
+      continue-on-error: false
+
+    - name: Run Prettier check
+      run: npm run format:check
+      continue-on-error: false
+
+    - name: Run Jest tests
+      run: npm test -- --coverage --watchAll=false
+      env:
+        NODE_ENV: test
+        EXPO_PUBLIC_API_URL: http://localhost:4000
+
+    - name: Check Expo configuration
+      run: npx expo doctor
+
+    - name: Build Expo bundle (Android)
+      run: npx expo export --platform android
+      continue-on-error: true
+
+    - name: Build Expo bundle (iOS)
+      run: npx expo export --platform ios
+      continue-on-error: true
+
+    - name: Upload React Native artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: react-native-bundles
+        path: mobile/dist/
+        retention-days: 7
+
+  # Security and Quality Checks
+  security-checks:
+    name: Security & Quality Checks
+    runs-on: ubuntu-latest
+    needs: [rust-engine, node-orchestrator, react-native-app]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Check for secrets
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  # Docker Build and Test
+  docker-build:
+    name: Docker Build & Test
+    runs-on: ubuntu-latest
+    needs: [rust-engine, node-orchestrator]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Rust Engine Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend/rust-engine
+        push: false
+        tags: satsconnect/rust-engine:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build Node Orchestrator Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend/node-orchestrator
+        push: false
+        tags: satsconnect/node-orchestrator:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker Compose
+      run: |
+        docker-compose -f docker-compose.yml config
+        docker-compose -f docker-compose.yml build --no-cache
+
+  # End-to-End Integration Tests
+  e2e-tests:
+    name: End-to-End Integration Tests
+    runs-on: ubuntu-latest
+    needs: [rust-engine, node-orchestrator, react-native-app]
+    if: github.event_name == 'pull_request'
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/node-orchestrator/package-lock.json
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build Rust Engine
+      run: |
+        cd backend/rust-engine
+        cargo build --release
+
+    - name: Start Rust Engine
+      run: |
+        cd backend/rust-engine
+        ./target/release/rust-engine &
+        sleep 10
+
+    - name: Install Node dependencies
+      run: |
+        cd backend/node-orchestrator
+        npm ci
+
+    - name: Start Node Orchestrator
+      run: |
+        cd backend/node-orchestrator
+        npm run build
+        npm start &
+        sleep 15
+
+    - name: Run E2E tests
+      run: |
+        cd backend/node-orchestrator
+        npm run test:e2e
+      env:
+        NODE_ENV: test
+        GRPC_ENGINE_URL: localhost:50051
+        REDIS_URL: redis://localhost:6379
+
+  # Deployment (Manual Trigger Only)
+  deploy:
+    name: Deploy to Environment
+    runs-on: ubuntu-latest
+    needs: [rust-engine, node-orchestrator, react-native-app, security-checks]
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to ${{ github.event.inputs.environment }}
+      run: |
+        echo "Deploying to ${{ github.event.inputs.environment }} environment"
+        # Add your deployment scripts here
+        # Example: kubectl apply -f k8s/${{ github.event.inputs.environment }}/
+        # Example: docker-compose -f docker-compose.${{ github.event.inputs.environment }}.yml up -d
+
+  # Notification
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [rust-engine, node-orchestrator, react-native-app, security-checks]
+    if: always()
+
+    steps:
+    - name: Notify Success
+      if: ${{ needs.rust-engine.result == 'success' && needs.node-orchestrator.result == 'success' && needs.react-native-app.result == 'success' }}
+      run: |
+        echo "✅ All CI checks passed successfully!"
+        echo "🚀 SatsConnect is ready for deployment"
+
+    - name: Notify Failure
+      if: ${{ needs.rust-engine.result == 'failure' || needs.node-orchestrator.result == 'failure' || needs.react-native-app.result == 'failure' }}
+      run: |
+        echo "❌ CI checks failed!"
+        echo "Please check the logs and fix the issues before merging"
+        exit 1

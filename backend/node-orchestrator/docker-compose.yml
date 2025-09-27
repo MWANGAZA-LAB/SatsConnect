@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  satsconnect-orchestrator:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - RUST_ENGINE_GRPC_URL=rust-engine:50051
+      - RUST_ENGINE_GRPC_USE_TLS=false
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=24h
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+    depends_on:
+      - rust-engine
+    restart: unless-stopped
+    networks:
+      - satsconnect-network
+    volumes:
+      - ./logs:/app/logs
+
+  rust-engine:
+    build: ../rust-engine
+    ports:
+      - "50051:50051"
+    environment:
+      - RUST_LOG=info
+    restart: unless-stopped
+    networks:
+      - satsconnect-network
+    volumes:
+      - rust-data:/app/data
+
+volumes:
+  rust-data:
+
+networks:
+  satsconnect-network:
+    driver: bridge

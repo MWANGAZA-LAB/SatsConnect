@@ -1,0 +1,156 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    # Rust Code Quality
+    - name: Check Rust formatting
+      run: |
+        cd backend/rust-engine
+        cargo fmt -- --check
+
+    - name: Run Clippy
+      run: |
+        cd backend/rust-engine
+        cargo clippy --all-targets --all-features -- -D warnings
+
+    # Node.js Code Quality
+    - name: Install Node dependencies
+      run: |
+        cd backend/node-orchestrator
+        npm ci
+
+    - name: Run ESLint
+      run: |
+        cd backend/node-orchestrator
+        npm run lint
+
+    - name: Run Prettier check
+      run: |
+        cd backend/node-orchestrator
+        npm run format:check
+
+    - name: Check TypeScript compilation
+      run: |
+        cd backend/node-orchestrator
+        npx tsc --noEmit
+
+    # React Native Code Quality
+    - name: Install Mobile dependencies
+      run: |
+        cd mobile
+        npm ci
+
+    - name: Run Mobile ESLint
+      run: |
+        cd mobile
+        npm run lint
+
+    - name: Run Mobile Prettier check
+      run: |
+        cd mobile
+        npm run format:check
+
+    - name: Check Mobile TypeScript compilation
+      run: |
+        cd mobile
+        npx tsc --noEmit
+
+    # Code Coverage
+    - name: Generate Rust coverage
+      run: |
+        cd backend/rust-engine
+        cargo install cargo-tarpaulin
+        cargo tarpaulin --out Xml --output-dir coverage
+      continue-on-error: true
+
+    - name: Generate Node.js coverage
+      run: |
+        cd backend/node-orchestrator
+        npm test -- --coverage --watchAll=false
+      continue-on-error: true
+
+    - name: Generate Mobile coverage
+      run: |
+        cd mobile
+        npm test -- --coverage --watchAll=false
+      continue-on-error: true
+
+    # Upload coverage reports
+    - name: Upload Rust coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/rust-engine/coverage/cobertura.xml
+        flags: rust
+        name: rust-coverage
+      continue-on-error: true
+
+    - name: Upload Node.js coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/node-orchestrator/coverage/lcov.info
+        flags: nodejs
+        name: nodejs-coverage
+      continue-on-error: true
+
+    - name: Upload Mobile coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./mobile/coverage/lcov.info
+        flags: mobile
+        name: mobile-coverage
+      continue-on-error: true
+
+    # Performance checks
+    - name: Check bundle sizes
+      run: |
+        cd backend/node-orchestrator
+        npm run build
+        du -sh dist/
+        echo "Node.js bundle size check completed"
+
+    - name: Check mobile bundle size
+      run: |
+        cd mobile
+        npx expo export --platform android
+        du -sh dist/
+        echo "Mobile bundle size check completed"
+      continue-on-error: true
+
+    # Documentation checks
+    - name: Check README files
+      run: |
+        find . -name "README.md" -exec echo "Found README: {}" \;
+        find . -name "*.md" -exec wc -l {} \;
+
+    - name: Check for TODO comments
+      run: |
+        echo "Checking for TODO comments in code..."
+        grep -r "TODO\|FIXME\|HACK" --include="*.rs" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" . || echo "No TODO comments found"
+      continue-on-error: true

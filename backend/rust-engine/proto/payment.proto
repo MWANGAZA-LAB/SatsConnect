@@ -1,0 +1,47 @@
+syntax = "proto3";
+package satsconnect.payment.v1;
+
+service PaymentService {
+  rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+  rpc GetPaymentStatus(PaymentStatusRequest) returns (PaymentResponse);
+  rpc ProcessRefund(RefundRequest) returns (PaymentResponse);
+  rpc PaymentStream(PaymentStreamRequest) returns (stream PaymentStreamResponse);
+}
+
+message PaymentRequest {
+  string payment_id = 1;
+  string wallet_id = 2;
+  uint64 amount_sats = 3;
+  string invoice = 4;
+  string description = 5;
+}
+
+message PaymentStatusRequest {
+  string payment_id = 1;
+}
+
+message RefundRequest {
+  string payment_id = 1;
+  uint64 amount_sats = 2;
+}
+
+message PaymentStreamRequest {
+  string wallet_id = 1;
+}
+
+message PaymentResponse {
+  string payment_id = 1;
+  string status = 2; // COMPLETED / PENDING / FAILED / REFUNDED
+  string message = 3;
+  uint64 amount_sats = 4;
+  string payment_hash = 5;
+  string timestamp = 6;
+}
+
+message PaymentStreamResponse {
+  string payment_id = 1;
+  string status = 2;
+  uint64 amount_sats = 3;
+  string payment_hash = 4;
+  string timestamp = 5;
+}
