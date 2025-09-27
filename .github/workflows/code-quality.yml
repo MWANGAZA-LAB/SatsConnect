@@ -104,7 +104,7 @@ jobs:
 
     # Upload coverage reports
     - name: Upload Rust coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./backend/rust-engine/coverage/cobertura.xml
         flags: rust
@@ -112,7 +112,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload Node.js coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./backend/node-orchestrator/coverage/lcov.info
         flags: nodejs
@@ -120,7 +120,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload Mobile coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./mobile/coverage/lcov.info
         flags: mobile
