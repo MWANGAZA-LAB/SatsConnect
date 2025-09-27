@@ -33,7 +33,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 # gRPC
 tonic = { version = "0.12", features = ["transport"] }
 prost = "0.13"
-prost-types = "0.13"
+prost-types = "0.14"
 
 # Lightning Node (LDK Node) - temporarily disabled due to prost conflicts
 # ldk-node = "0.6"
@@ -60,7 +60,7 @@ warp = "0.3"
 tonic-build = "0.12" 
 protoc-bin-vendored = "3"
 prost = "0.13"
-prost-types = "0.13"
+prost-types = "0.14"
 
 # Temporarily disabled due to prost conflicts
 # [package.metadata.tonic-build]
