@@ -132,7 +132,8 @@ class QueueService {
   }
 
   private async processMpesaBuy(job: Job<MpesaBuyJob>): Promise<void> {
-    const { transactionId, phoneNumber, amount, accountReference, transactionDesc, walletId } = job.data;
+    const { transactionId, phoneNumber, amount, accountReference, transactionDesc, walletId } =
+      job.data;
 
     try {
       logger.info('Processing MPesa buy job:', { transactionId, phoneNumber, amount });
@@ -161,7 +162,6 @@ class QueueService {
         merchantRequestID: stkResponse.MerchantRequestID,
         checkoutRequestID: stkResponse.CheckoutRequestID,
       });
-
     } catch (error: any) {
       logger.error('MPesa buy job failed:', {
         transactionId,
@@ -174,7 +174,14 @@ class QueueService {
   }
 
   private async processMpesaPayout(job: Job<MpesaPayoutJob>): Promise<void> {
-    const { transactionId, phoneNumber, amount, accountReference, transactionDesc, lightningInvoice } = job.data;
+    const {
+      transactionId,
+      phoneNumber,
+      amount,
+      accountReference,
+      transactionDesc,
+      lightningInvoice,
+    } = job.data;
 
     try {
       logger.info('Processing MPesa payout job:', { transactionId, phoneNumber, amount });
@@ -204,7 +211,6 @@ class QueueService {
         originatorConversationID: payoutResponse.OriginatorConversationID,
         conversationID: payoutResponse.ConversationID,
       });
-
     } catch (error: any) {
       logger.error('MPesa payout job failed:', {
         transactionId,
@@ -220,7 +226,12 @@ class QueueService {
     const { transactionId, phoneNumber, amount, provider, reference, lightningInvoice } = job.data;
 
     try {
-      logger.info('Processing airtime purchase job:', { transactionId, phoneNumber, amount, provider });
+      logger.info('Processing airtime purchase job:', {
+        transactionId,
+        phoneNumber,
+        amount,
+        provider,
+      });
 
       // Update transaction status to processing
       await this.updateTransactionStatus(transactionId, 'processing');
@@ -250,7 +261,6 @@ class QueueService {
         airtimeTransactionId: airtimeResponse.transactionId,
         status: finalStatus,
       });
-
     } catch (error: any) {
       logger.error('Airtime purchase job failed:', {
         transactionId,
@@ -313,7 +323,11 @@ class QueueService {
     return job;
   }
 
-  private async updateTransactionStatus(transactionId: string, status: string, error?: string): Promise<void> {
+  private async updateTransactionStatus(
+    transactionId: string,
+    status: string,
+    error?: string
+  ): Promise<void> {
     // In a real implementation, this would update a database
     // For now, we'll just log the status change
     logger.info('Transaction status updated:', {
@@ -336,7 +350,7 @@ class QueueService {
   async getJobStatus(jobId: string): Promise<any> {
     // Check all queues for the job
     const queues = [this.mpesaBuyQueue, this.mpesaPayoutQueue, this.airtimeQueue];
-    
+
     for (const queue of queues) {
       const job = await queue.getJob(jobId);
       if (job) {

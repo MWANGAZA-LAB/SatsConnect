@@ -4,7 +4,7 @@ import logger from '../utils/logger';
 
 export const handleValidationErrors = (req: Request, res: Response, next: NextFunction): void => {
   const errors = validationResult(req);
-  
+
   if (!errors.isEmpty()) {
     logger.warn('Validation failed', {
       errors: errors.array(),
@@ -13,11 +13,11 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
       query: req.query,
       ip: req.ip,
     });
-    
+
     res.status(400).json({
       success: false,
       error: 'Validation failed',
-      details: errors.array().map(error => ({
+      details: errors.array().map((error) => ({
         field: error.type === 'field' ? error.path : 'unknown',
         message: error.msg,
         value: error.type === 'field' ? error.value : undefined,
@@ -25,7 +25,7 @@ export const handleValidationErrors = (req: Request, res: Response, next: NextFu
     });
     return;
   }
-  
+
   next();
 };
 

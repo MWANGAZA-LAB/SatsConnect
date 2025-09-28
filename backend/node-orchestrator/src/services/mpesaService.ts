@@ -63,9 +63,10 @@ class MpesaService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: config.mpesa.environment === 'production' 
-        ? 'https://api.safaricom.co.ke' 
-        : 'https://sandbox.safaricom.co.ke',
+      baseURL:
+        config.mpesa.environment === 'production'
+          ? 'https://api.safaricom.co.ke'
+          : 'https://sandbox.safaricom.co.ke',
       timeout: 30000,
     });
 
@@ -99,7 +100,7 @@ class MpesaService {
 
   private async ensureValidToken(): Promise<void> {
     const now = Date.now();
-    
+
     if (this.accessToken && now < this.tokenExpiry) {
       return;
     }
@@ -124,7 +125,7 @@ class MpesaService {
 
       const data: MpesaAuthResponse = response.data;
       this.accessToken = data.access_token;
-      this.tokenExpiry = Date.now() + (parseInt(data.expires_in) * 1000) - 60000; // 1 minute buffer
+      this.tokenExpiry = Date.now() + parseInt(data.expires_in) * 1000 - 60000; // 1 minute buffer
 
       logger.info('MPesa authentication successful', {
         expiresIn: data.expires_in,
@@ -136,7 +137,10 @@ class MpesaService {
   }
 
   private generateTimestamp(): string {
-    return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+    return new Date()
+      .toISOString()
+      .replace(/[^0-9]/g, '')
+      .slice(0, 14);
   }
 
   private generatePassword(): string {
@@ -173,9 +177,9 @@ class MpesaService {
       });
 
       const response = await this.api.post('/mpesa/stkpush/v1/processrequest', payload);
-      
+
       const result: StkPushResponse = response.data;
-      
+
       logger.info('STK Push initiated successfully:', {
         merchantRequestID: result.MerchantRequestID,
         checkoutRequestID: result.CheckoutRequestID,
@@ -205,7 +209,7 @@ class MpesaService {
       };
 
       const response = await this.api.post('/mpesa/stkpushquery/v1/query', payload);
-      
+
       logger.info('STK Push status queried:', {
         checkoutRequestID,
         response: response.data,
@@ -246,9 +250,9 @@ class MpesaService {
       });
 
       const response = await this.api.post('/mpesa/b2c/v1/paymentrequest', payload);
-      
+
       const result: PayoutResponse = response.data;
-      
+
       logger.info('Payout initiated successfully:', {
         originatorConversationID: result.OriginatorConversationID,
         conversationID: result.ConversationID,

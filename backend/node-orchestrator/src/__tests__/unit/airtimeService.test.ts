@@ -50,16 +50,16 @@ describe('AirtimeService', () => {
       },
     };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const request = {
       phoneNumber: '254712345678',
       amount: 100,
       provider: 'safaricom' as const,
       lightningInvoice: 'lnbc1000n1p...',
     };
-    
+
     const result = await airtimeService.buyAirtime(request);
-    
+
     expect(result.success).toBe(true);
     expect(result.transactionId).toBe('chimoney_tx_123');
     expect(mockAxiosInstance.post).toHaveBeenCalledWith('/payouts/airtime', expect.any(Object));
@@ -74,16 +74,16 @@ describe('AirtimeService', () => {
       },
     };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const request = {
       phoneNumber: '254712345678',
       amount: 100,
       provider: 'airtel' as const,
       lightningInvoice: 'lnbc1000n1p...',
     };
-    
+
     const result = await airtimeService.buyAirtime(request);
-    
+
     expect(result.success).toBe(true);
     expect(result.transactionId).toBe('airtime_tx_123');
     expect(mockAxiosInstance.post).toHaveBeenCalledWith('/payouts/airtime', expect.any(Object));
@@ -91,21 +91,21 @@ describe('AirtimeService', () => {
 
   it('should handle airtime purchase error', async () => {
     mockAxiosInstance.post.mockRejectedValueOnce(new Error('Airtime purchase failed'));
-    
+
     const request = {
       phoneNumber: '254712345678',
       amount: 100,
       provider: 'safaricom' as const,
       lightningInvoice: 'lnbc1000n1p...',
     };
-    
+
     await expect(airtimeService.buyAirtime(request)).rejects.toThrow('Airtime purchase failed');
   });
 
   it('should validate phone number format', () => {
     const validPhone = '254712345678';
     const invalidPhone = '123456789';
-    
+
     // This would be tested through the service methods that validate phone numbers
     expect(validPhone.startsWith('254')).toBe(true);
     expect(invalidPhone.startsWith('254')).toBe(false);
@@ -120,9 +120,9 @@ describe('AirtimeService', () => {
       },
     };
     mockAxiosInstance.get.mockResolvedValueOnce(mockResponse);
-    
+
     const result = await airtimeService.getTransactionStatus('test_tx_123');
-    
+
     expect(result.success).toBe(true);
     expect(result.status).toBe('success');
     expect(mockAxiosInstance.get).toHaveBeenCalledWith('/payouts/test_tx_123');
@@ -130,14 +130,16 @@ describe('AirtimeService', () => {
 
   it('should handle transaction status error', async () => {
     mockAxiosInstance.get.mockRejectedValueOnce(new Error('Status check failed'));
-    
-    await expect(airtimeService.getTransactionStatus('test_tx_123')).rejects.toThrow('Status check failed');
+
+    await expect(airtimeService.getTransactionStatus('test_tx_123')).rejects.toThrow(
+      'Status check failed'
+    );
   });
 
   it('should validate phone number format', () => {
     const validPhone = '254712345678';
     const invalidPhone = '123456789';
-    
+
     // This would be tested through the service methods that validate phone numbers
     expect(validPhone.startsWith('254')).toBe(true);
     expect(invalidPhone.startsWith('254')).toBe(false);
@@ -146,14 +148,14 @@ describe('AirtimeService', () => {
   it('should handle invalid response format', async () => {
     const mockResponse = { data: { invalid: 'response' } };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const request = {
       phoneNumber: '254712345678',
       amount: 100,
       provider: 'safaricom' as const,
       lightningInvoice: 'lnbc1000n1p...',
     };
-    
+
     await expect(airtimeService.buyAirtime(request)).rejects.toThrow('Airtime purchase failed');
   });
 
@@ -161,15 +163,14 @@ describe('AirtimeService', () => {
     const timeoutError = new Error('timeout of 5000ms exceeded');
     timeoutError.name = 'TimeoutError';
     mockAxiosInstance.post.mockRejectedValueOnce(timeoutError);
-    
+
     const request = {
       phoneNumber: '254712345678',
       amount: 100,
       provider: 'safaricom' as const,
       lightningInvoice: 'lnbc1000n1p...',
     };
-    
+
     await expect(airtimeService.buyAirtime(request)).rejects.toThrow('timeout of 5000ms exceeded');
   });
-
 });

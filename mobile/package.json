@@ -13,9 +13,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "echo 'Linting disabled due to TypeScript version conflict'",
-    "lint:fix": "echo 'Linting disabled due to TypeScript version conflict'",
-    "type-check": "echo 'TypeScript checking disabled due to theme compatibility issues'"
+    "lint": "eslint app/**/*.{ts,tsx} --ext .ts,.tsx",
+    "lint:fix": "eslint app/**/*.{ts,tsx} --ext .ts,.tsx --fix",
+    "format": "prettier --write app/**/*.{ts,tsx}",
+    "format:check": "prettier --check app/**/*.{ts,tsx}",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.3",

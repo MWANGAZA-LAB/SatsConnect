@@ -80,7 +80,7 @@ class WalletService {
 
       clientMethod.call(this, request, (error: any, response: any) => {
         clearTimeout(timeout);
-        
+
         if (error) {
           logger.error(`gRPC call failed: ${method}`, {
             error: error.message,
@@ -99,7 +99,7 @@ class WalletService {
   public async createWallet(request: CreateWalletRequest): Promise<CreateWalletResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         label: request.label || 'default',
         mnemonic: request.mnemonic || '',
@@ -130,7 +130,7 @@ class WalletService {
   public async getBalance(): Promise<GetBalanceResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const response = await this.callGrpcMethod(
         'GetBalance',
         {},
@@ -156,7 +156,7 @@ class WalletService {
   public async newInvoice(request: NewInvoiceRequest): Promise<NewInvoiceResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         amount_sats: request.amount_sats,
         memo: request.memo || '',
@@ -187,7 +187,7 @@ class WalletService {
   public async sendPayment(request: SendPaymentRequest): Promise<SendPaymentResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         invoice: request.invoice,
       };
@@ -217,7 +217,7 @@ class WalletService {
   public async buyAirtime(request: BuyAirtimeRequest): Promise<BuyAirtimeResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         amount_sats: request.amount_sats,
         phone_number: request.phone_number,

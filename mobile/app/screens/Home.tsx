@@ -22,7 +22,9 @@ type HomeNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function Home() {
   const navigation = useNavigation<HomeNavigationProp>();
-  const [walletState, setWalletState] = useState(walletService.getWalletState());
+  const [walletState, setWalletState] = useState(
+    walletService.getWalletState()
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
 
@@ -86,21 +88,17 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await authService.logout();
-            navigation.replace('Onboarding');
-          },
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await authService.logout();
+          navigation.replace('Onboarding');
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (walletState.isLoading) {
@@ -140,7 +138,10 @@ export default function Home() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.greeting}>Hello! 👋</Text>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.logoutButton}
+            >
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           </View>
@@ -152,12 +153,10 @@ export default function Home() {
           <View style={styles.balanceHeader}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
             <TouchableOpacity onPress={toggleBalanceVisibility}>
-              <Text style={styles.toggleText}>
-                {showBalance ? '👁️' : '🙈'}
-              </Text>
+              <Text style={styles.toggleText}>{showBalance ? '👁️' : '🙈'}</Text>
             </TouchableOpacity>
           </View>
-          
+
           {showBalance ? (
             <>
               <Text style={styles.balanceAmount}>
@@ -166,7 +165,7 @@ export default function Home() {
               <Text style={styles.balanceKES}>
                 {formatKES(walletState.balance.totalSats)}
               </Text>
-              
+
               <View style={styles.balanceBreakdown}>
                 <View style={styles.balanceItem}>
                   <Text style={styles.balanceItemLabel}>On-chain</Text>
@@ -195,18 +194,27 @@ export default function Home() {
               <Text style={styles.actionIcon}>📤</Text>
               <Text style={styles.actionLabel}>Send</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handleReceive}>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleReceive}
+            >
               <Text style={styles.actionIcon}>📥</Text>
               <Text style={styles.actionLabel}>Receive</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handleBuyAirtime}>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleBuyAirtime}
+            >
               <Text style={styles.actionIcon}>📱</Text>
               <Text style={styles.actionLabel}>Airtime</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.actionButton} onPress={handlePayBill}>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handlePayBill}
+            >
               <Text style={styles.actionIcon}>🧾</Text>
               <Text style={styles.actionLabel}>Pay Bill</Text>
             </TouchableOpacity>
@@ -221,16 +229,20 @@ export default function Home() {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          
+
           {walletState.transactions.length > 0 ? (
             <View style={styles.transactionList}>
-              {walletState.transactions.slice(0, 3).map((transaction) => (
+              {walletState.transactions.slice(0, 3).map(transaction => (
                 <Card key={transaction.id} style={styles.transactionCard}>
                   <View style={styles.transactionHeader}>
                     <Text style={styles.transactionType}>
-                      {transaction.type === 'send' ? '📤' : 
-                       transaction.type === 'receive' ? '📥' :
-                       transaction.type === 'airtime' ? '📱' : '🧾'}
+                      {transaction.type === 'send'
+                        ? '📤'
+                        : transaction.type === 'receive'
+                          ? '📥'
+                          : transaction.type === 'airtime'
+                            ? '📱'
+                            : '🧾'}
                     </Text>
                     <Text style={styles.transactionAmount}>
                       {transaction.type === 'send' ? '-' : '+'}
@@ -248,9 +260,7 @@ export default function Home() {
             </View>
           ) : (
             <Card style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                No transactions yet
-              </Text>
+              <Text style={styles.emptyStateText}>No transactions yet</Text>
               <Text style={styles.emptyStateSubtext}>
                 Start by sending or receiving Bitcoin
               </Text>

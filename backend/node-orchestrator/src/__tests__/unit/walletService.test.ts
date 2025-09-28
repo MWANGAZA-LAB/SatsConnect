@@ -67,7 +67,8 @@ describe('WalletService', () => {
 
       const result = await walletService.createWallet({
         label: 'test-wallet-2',
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        mnemonic:
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
       });
 
       expect(result.success).toBe(true);

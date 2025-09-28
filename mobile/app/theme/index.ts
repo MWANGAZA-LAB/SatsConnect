@@ -6,7 +6,7 @@ export const theme = {
   colors,
   typography,
   spacing,
-  
+
   // Common styles
   shadows: {
     small: {
@@ -31,7 +31,7 @@ export const theme = {
       elevation: 8,
     },
   },
-  
+
   // Border radius
   borderRadius: {
     xs: 4,
@@ -42,7 +42,7 @@ export const theme = {
     '2xl': 20,
     full: 9999,
   },
-  
+
   // Common component styles
   components: {
     card: {

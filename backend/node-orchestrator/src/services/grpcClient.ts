@@ -6,16 +6,16 @@ import logger from '../utils/logger';
 
 // Load proto files
 const PROTO_PATH = join(process.cwd(), 'proto');
-const packageDefinition = protoLoader.loadSync([
-  join(PROTO_PATH, 'wallet.proto'),
-  join(PROTO_PATH, 'payment.proto'),
-], {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
+const packageDefinition = protoLoader.loadSync(
+  [join(PROTO_PATH, 'wallet.proto'), join(PROTO_PATH, 'payment.proto')],
+  {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+  }
+);
 
 const protoDefinition = grpc.loadPackageDefinition(packageDefinition) as any;
 const walletProto = protoDefinition.satsconnect.wallet.v1;
@@ -45,7 +45,7 @@ class GrpcClientService {
         'grpc.http2.min_ping_interval_without_data_ms': 300000,
       };
 
-      const credentials = config.rustEngine.useTls 
+      const credentials = config.rustEngine.useTls
         ? grpc.credentials.createSsl()
         : grpc.credentials.createInsecure();
 
@@ -95,18 +95,14 @@ class GrpcClientService {
         const deadline = new Date();
         deadline.setSeconds(deadline.getSeconds() + 5); // 5 second timeout
 
-        this.clients!.walletClient.GetBalance(
-          {},
-          { deadline },
-          (error: any) => {
-            if (error) {
-              logger.warn('gRPC health check failed', { error: error.message });
-              resolve(false);
-            } else {
-              resolve(true);
-            }
+        this.clients!.walletClient.GetBalance({}, { deadline }, (error: any) => {
+          if (error) {
+            logger.warn('gRPC health check failed', { error: error.message });
+            resolve(false);
+          } else {
+            resolve(true);
           }
-        );
+        });
       });
     } catch (error) {
       logger.error('gRPC health check error', { error: error.message });

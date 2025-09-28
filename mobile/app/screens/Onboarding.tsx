@@ -23,7 +23,10 @@ import { authService } from '../services/authService';
 
 const { width } = Dimensions.get('window');
 
-type OnboardingNavigationProp = StackNavigationProp<RootStackParamList, 'Onboarding'>;
+type OnboardingNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'Onboarding'
+>;
 
 export default function Onboarding() {
   const navigation = useNavigation<OnboardingNavigationProp>();
@@ -51,10 +54,10 @@ export default function Onboarding() {
     if (step === 2) {
       generateMnemonic();
     }
-    
+
     // Update progress
     setProgress((step / (steps.length - 1)) * 100);
-    
+
     // Animate step transitions
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -73,16 +76,37 @@ export default function Onboarding() {
   const generateMnemonic = () => {
     // In a real app, use a proper BIP39 mnemonic generator
     const words = [
-      'abandon', 'ability', 'able', 'about', 'above', 'absent',
-      'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident',
-      'account', 'accuse', 'achieve', 'acid', 'acoustic', 'acquire',
-      'across', 'act', 'action', 'actor', 'actress', 'actual',
+      'abandon',
+      'ability',
+      'able',
+      'about',
+      'above',
+      'absent',
+      'absorb',
+      'abstract',
+      'absurd',
+      'abuse',
+      'access',
+      'accident',
+      'account',
+      'accuse',
+      'achieve',
+      'acid',
+      'acoustic',
+      'acquire',
+      'across',
+      'act',
+      'action',
+      'actor',
+      'actress',
+      'actual',
     ];
-    
-    const generatedMnemonic = Array.from({ length: 12 }, () => 
-      words[Math.floor(Math.random() * words.length)]
+
+    const generatedMnemonic = Array.from(
+      { length: 12 },
+      () => words[Math.floor(Math.random() * words.length)]
     );
-    
+
     setMnemonic(generatedMnemonic);
     setShuffledWords([...generatedMnemonic].sort(() => Math.random() - 0.5));
   };
@@ -103,10 +127,10 @@ export default function Onboarding() {
 
   const handleWordSelect = (word: string) => {
     if (selectedWords.includes(word)) return;
-    
+
     const newSelected = [...selectedWords, word];
     setSelectedWords(newSelected);
-    
+
     if (newSelected.length === mnemonic.length) {
       setConfirmedMnemonic(newSelected);
     }
@@ -130,13 +154,13 @@ export default function Onboarding() {
   const completeOnboarding = async () => {
     try {
       setIsLoading(true);
-      
+
       // Create wallet with generated mnemonic
       const success = await walletService.createWallet(
         'My SatsConnect Wallet',
         mnemonic.join(' ')
       );
-      
+
       if (success) {
         navigation.replace('Home');
       } else {
@@ -183,7 +207,7 @@ export default function Onboarding() {
       <Text style={styles.subtitle}>
         SatsConnect is a non-custodial wallet. This means:
       </Text>
-      
+
       <View style={styles.infoList}>
         <View style={styles.infoItem}>
           <Text style={styles.infoIcon}>🔑</Text>
@@ -194,7 +218,7 @@ export default function Onboarding() {
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoIcon}>💪</Text>
           <View style={styles.infoText}>
@@ -204,13 +228,14 @@ export default function Onboarding() {
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoIcon}>⚠️</Text>
           <View style={styles.infoText}>
             <Text style={styles.infoTitle}>Your responsibility</Text>
             <Text style={styles.infoDescription}>
-              If you lose your seed phrase, you lose access to your funds forever.
+              If you lose your seed phrase, you lose access to your funds
+              forever.
             </Text>
           </View>
         </View>
@@ -224,7 +249,7 @@ export default function Onboarding() {
       <Text style={styles.subtitle}>
         Write down these 12 words in order. This is your backup.
       </Text>
-      
+
       <Card style={styles.seedCard}>
         <View style={styles.seedGrid}>
           {mnemonic.map((word, index) => (
@@ -234,12 +259,12 @@ export default function Onboarding() {
             </View>
           ))}
         </View>
-        
+
         <TouchableOpacity style={styles.copyButton} onPress={copyMnemonic}>
           <Text style={styles.copyButtonText}>📋 Copy to Clipboard</Text>
         </TouchableOpacity>
       </Card>
-      
+
       <Text style={styles.warningText}>
         ⚠️ Never share your seed phrase with anyone. Store it safely offline.
       </Text>
@@ -252,7 +277,7 @@ export default function Onboarding() {
       <Text style={styles.subtitle}>
         Tap the words in the correct order to confirm you've saved them.
       </Text>
-      
+
       <Card style={styles.confirmCard}>
         <View style={styles.selectedWords}>
           {selectedWords.map((word, index) => (
@@ -266,7 +291,7 @@ export default function Onboarding() {
             </TouchableOpacity>
           ))}
         </View>
-        
+
         <View style={styles.wordOptions}>
           {shuffledWords
             .filter(word => !selectedWords.includes(word))
@@ -287,18 +312,19 @@ export default function Onboarding() {
   const renderDisclaimer = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.title}>Important Disclaimer</Text>
-      
+
       <Card style={styles.disclaimerCard}>
-        <Text style={styles.disclaimerTitle}>⚠️ You are responsible for your funds</Text>
+        <Text style={styles.disclaimerTitle}>
+          ⚠️ You are responsible for your funds
+        </Text>
         <Text style={styles.disclaimerText}>
-          • If you lose your seed phrase, you lose access to your funds forever{'\n'}
-          • Bitcoin transactions are irreversible{'\n'}
-          • Always verify addresses before sending{'\n'}
-          • Keep your seed phrase safe and offline{'\n'}
-          • This is experimental software - use at your own risk
+          • If you lose your seed phrase, you lose access to your funds forever
+          {'\n'}• Bitcoin transactions are irreversible{'\n'}• Always verify
+          addresses before sending{'\n'}• Keep your seed phrase safe and offline
+          {'\n'}• This is experimental software - use at your own risk
         </Text>
       </Card>
-      
+
       <Text style={styles.agreementText}>
         By continuing, you agree to these terms and understand the risks.
       </Text>
@@ -309,14 +335,13 @@ export default function Onboarding() {
     <View style={styles.stepContainer}>
       <Text style={styles.title}>🎉 You're All Set!</Text>
       <Text style={styles.subtitle}>
-        Your wallet has been created successfully. You can now start using SatsConnect.
+        Your wallet has been created successfully. You can now start using
+        SatsConnect.
       </Text>
-      
+
       <Card style={styles.completeCard}>
         <Text style={styles.completeIcon}>✅</Text>
-        <Text style={styles.completeText}>
-          Wallet created and secured
-        </Text>
+        <Text style={styles.completeText}>Wallet created and secured</Text>
       </Card>
     </View>
   );
@@ -359,20 +384,23 @@ export default function Onboarding() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {renderStep()}
       </ScrollView>
-      
+
       <View style={styles.footer}>
         <View style={styles.progressBar}>
-          <View 
+          <View
             style={[
-              styles.progressFill, 
-              { width: `${((step + 1) / steps.length) * 100}%` }
-            ]} 
+              styles.progressFill,
+              { width: `${((step + 1) / steps.length) * 100}%` },
+            ]}
           />
         </View>
-        
+
         <View style={styles.buttonRow}>
           {step > 0 && (
             <Button
@@ -382,7 +410,7 @@ export default function Onboarding() {
               style={styles.backButton}
             />
           )}
-          
+
           <Button
             title={step === steps.length - 1 ? 'Get Started' : 'Next'}
             onPress={handleNext}

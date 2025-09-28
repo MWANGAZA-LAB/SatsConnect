@@ -85,15 +85,30 @@ export const Toast: React.FC<ToastProps> = ({
   const getToastStyle = () => {
     switch (type) {
       case 'success':
-        return { backgroundColor: theme.colors.success, borderLeftColor: theme.colors.successDark };
+        return {
+          backgroundColor: theme.colors.success,
+          borderLeftColor: theme.colors.successDark,
+        };
       case 'error':
-        return { backgroundColor: theme.colors.error, borderLeftColor: theme.colors.errorDark };
+        return {
+          backgroundColor: theme.colors.error,
+          borderLeftColor: theme.colors.errorDark,
+        };
       case 'warning':
-        return { backgroundColor: theme.colors.warning, borderLeftColor: theme.colors.warningDark };
+        return {
+          backgroundColor: theme.colors.warning,
+          borderLeftColor: theme.colors.warningDark,
+        };
       case 'info':
-        return { backgroundColor: theme.colors.info, borderLeftColor: theme.colors.infoDark };
+        return {
+          backgroundColor: theme.colors.info,
+          borderLeftColor: theme.colors.infoDark,
+        };
       default:
-        return { backgroundColor: theme.colors.gray100, borderLeftColor: theme.colors.gray400 };
+        return {
+          backgroundColor: theme.colors.gray100,
+          borderLeftColor: theme.colors.gray400,
+        };
     }
   };
 
@@ -127,7 +142,10 @@ export const Toast: React.FC<ToastProps> = ({
           <Text style={styles.icon}>{getIcon()}</Text>
           <Text style={styles.message}>{message}</Text>
           {action && (
-            <TouchableOpacity onPress={action.onPress} style={styles.actionButton}>
+            <TouchableOpacity
+              onPress={action.onPress}
+              style={styles.actionButton}
+            >
               <Text style={styles.actionText}>{action.label}</Text>
             </TouchableOpacity>
           )}

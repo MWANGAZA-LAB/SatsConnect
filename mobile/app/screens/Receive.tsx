@@ -30,10 +30,10 @@ export default function Receive() {
   const [memo, setMemo] = useState('');
   const [invoice, setInvoice] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     if (!amount.trim()) {
       newErrors.amount = 'Amount is required';
@@ -56,7 +56,7 @@ export default function Receive() {
 
     try {
       setIsGenerating(true);
-      
+
       const amountSats = Math.floor(Number(amount));
       const generatedInvoice = await walletService.createInvoice(
         amountSats,
@@ -146,11 +146,14 @@ export default function Receive() {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Receive Bitcoin</Text>
           <Text style={styles.subtitle}>
@@ -164,7 +167,7 @@ export default function Receive() {
               label="Amount (sats)"
               placeholder="1000"
               value={amount}
-              onChangeText={(text) => setAmount(formatAmount(text))}
+              onChangeText={text => setAmount(formatAmount(text))}
               keyboardType="numeric"
               error={errors.amount}
             />
@@ -198,9 +201,7 @@ export default function Receive() {
               <Text style={styles.amountText}>
                 {formatSats(Number(amount))}
               </Text>
-              <Text style={styles.amountKES}>
-                {formatKES(Number(amount))}
-              </Text>
+              <Text style={styles.amountKES}>{formatKES(Number(amount))}</Text>
             </View>
 
             <View style={styles.qrContainer}>
@@ -239,21 +240,19 @@ export default function Receive() {
         <Card style={styles.infoCard}>
           <Text style={styles.infoTitle}>💡 How to Receive</Text>
           <Text style={styles.infoText}>
-            • Share the QR code or invoice with the sender{'\n'}
-            • The sender scans the QR code or copies the invoice{'\n'}
-            • Payment is usually received instantly{'\n'}
-            • Keep the invoice private until payment is complete{'\n'}
-            • Invoices expire after 24 hours for security
+            • Share the QR code or invoice with the sender{'\n'}• The sender
+            scans the QR code or copies the invoice{'\n'}• Payment is usually
+            received instantly{'\n'}• Keep the invoice private until payment is
+            complete{'\n'}• Invoices expire after 24 hours for security
           </Text>
         </Card>
 
         <Card style={styles.warningCard}>
           <Text style={styles.warningTitle}>⚠️ Important</Text>
           <Text style={styles.warningText}>
-            • Only share this invoice with trusted senders{'\n'}
-            • Each invoice can only be used once{'\n'}
-            • Don't share screenshots of the QR code publicly{'\n'}
-            • If you need a new invoice, generate a fresh one
+            • Only share this invoice with trusted senders{'\n'}• Each invoice
+            can only be used once{'\n'}• Don't share screenshots of the QR code
+            publicly{'\n'}• If you need a new invoice, generate a fresh one
           </Text>
         </Card>
 

@@ -31,7 +31,7 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = authService.subscribe(setAuthState);
-    
+
     // Initialize auth and check if user has wallet
     const initializeApp = async () => {
       try {
@@ -50,8 +50,8 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <LoadingSpinner 
-        text="Initializing SatsConnect..." 
+      <LoadingSpinner
+        text="Initializing SatsConnect..."
         style={{ backgroundColor: theme.colors.background }}
       />
     );
@@ -60,8 +60,8 @@ export default function App() {
   return (
     <NavigationContainer>
       <StatusBar style="dark" backgroundColor={theme.colors.background} />
-      <Stack.Navigator 
-        initialRouteName={authState.hasWallet ? "Home" : "Onboarding"}
+      <Stack.Navigator
+        initialRouteName={authState.hasWallet ? 'Home' : 'Onboarding'}
         screenOptions={{
           headerStyle: {
             backgroundColor: theme.colors.surface,
@@ -73,56 +73,56 @@ export default function App() {
           headerShadowVisible: false,
         }}
       >
-        <Stack.Screen 
-          name="Onboarding" 
+        <Stack.Screen
+          name="Onboarding"
           component={Onboarding}
           options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="Home" 
+        <Stack.Screen
+          name="Home"
           component={Home}
-          options={{ 
+          options={{
             title: 'SatsConnect',
-            headerShown: false 
+            headerShown: false,
           }}
         />
-        <Stack.Screen 
-          name="Send" 
+        <Stack.Screen
+          name="Send"
           component={Send}
-          options={{ 
+          options={{
             title: 'Send Bitcoin',
-            presentation: 'modal'
+            presentation: 'modal',
           }}
         />
-        <Stack.Screen 
-          name="Receive" 
+        <Stack.Screen
+          name="Receive"
           component={Receive}
-          options={{ 
+          options={{
             title: 'Receive Bitcoin',
-            presentation: 'modal'
+            presentation: 'modal',
           }}
         />
-        <Stack.Screen 
-          name="History" 
+        <Stack.Screen
+          name="History"
           component={History}
-          options={{ 
-            title: 'Transaction History'
+          options={{
+            title: 'Transaction History',
           }}
         />
-        <Stack.Screen 
-          name="Airtime" 
+        <Stack.Screen
+          name="Airtime"
           component={Airtime}
-          options={{ 
+          options={{
             title: 'Buy Airtime',
-            presentation: 'modal'
+            presentation: 'modal',
           }}
         />
-        <Stack.Screen 
-          name="BillPayment" 
+        <Stack.Screen
+          name="BillPayment"
           component={BillPayment}
-          options={{ 
+          options={{
             title: 'Pay Bills',
-            presentation: 'modal'
+            presentation: 'modal',
           }}
         />
       </Stack.Navigator>

@@ -11,7 +11,7 @@ const createTestApp = () => {
   const app = express();
   app.use(cors());
   app.use(express.json());
-  
+
   // Health check endpoint
   app.get('/health', async (req, res) => {
     try {
@@ -21,14 +21,14 @@ const createTestApp = () => {
         timestamp: new Date().toISOString(),
         services: {
           nodeOrchestrator: 'healthy',
-          rustEngine: engineHealthy ? 'healthy' : 'unhealthy'
-        }
+          rustEngine: engineHealthy ? 'healthy' : 'unhealthy',
+        },
       });
     } catch (error) {
       res.status(500).json({
         status: 'error',
         timestamp: new Date().toISOString(),
-        error: 'Health check failed'
+        error: 'Health check failed',
       });
     }
   });
@@ -46,8 +46,8 @@ const createTestApp = () => {
       endpoints: {
         health: '/health',
         wallet: '/api/wallet',
-        payments: '/api/payments'
-      }
+        payments: '/api/payments',
+      },
     });
   });
 
@@ -56,7 +56,7 @@ const createTestApp = () => {
     console.error('Unhandled error:', err);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
     });
   });
 
@@ -64,7 +64,7 @@ const createTestApp = () => {
   app.use('*', (req, res) => {
     res.status(404).json({
       success: false,
-      error: 'Endpoint not found'
+      error: 'Endpoint not found',
     });
   });
 
@@ -82,9 +82,7 @@ describe('REST API Integration Tests', () => {
 
   describe('Health Check', () => {
     test('GET /health should return service status', async () => {
-      const response = await request(app)
-        .get('/health')
-        .expect(200);
+      const response = await request(app).get('/health').expect(200);
 
       expect(response.body).toHaveProperty('status');
       expect(response.body).toHaveProperty('timestamp');
@@ -94,9 +92,7 @@ describe('REST API Integration Tests', () => {
     });
 
     test('GET / should return API information', async () => {
-      const response = await request(app)
-        .get('/')
-        .expect(200);
+      const response = await request(app).get('/').expect(200);
 
       expect(response.body).toHaveProperty('name');
       expect(response.body).toHaveProperty('version');
@@ -108,7 +104,7 @@ describe('REST API Integration Tests', () => {
   describe('Wallet API Endpoints', () => {
     test('POST /api/wallet/create should create wallet', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .post('/api/wallet/create')
         .send(testData.wallet)
@@ -118,7 +114,7 @@ describe('REST API Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('nodeId');
         expect(response.body.data).toHaveProperty('address');
@@ -126,14 +122,12 @@ describe('REST API Integration Tests', () => {
     });
 
     test('GET /api/wallet/balance should return balance', async () => {
-      const response = await request(app)
-        .get('/api/wallet/balance')
-        .expect(200);
+      const response = await request(app).get('/api/wallet/balance').expect(200);
 
       expect(response.body).toHaveProperty('success');
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('onchainSats');
         expect(response.body.data).toHaveProperty('lightningSats');
@@ -143,7 +137,7 @@ describe('REST API Integration Tests', () => {
 
     test('POST /api/wallet/invoice should create invoice', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .post('/api/wallet/invoice')
         .send(testData.invoice)
@@ -153,7 +147,7 @@ describe('REST API Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('invoice');
         expect(response.body.data).toHaveProperty('paymentHash');
@@ -163,7 +157,7 @@ describe('REST API Integration Tests', () => {
 
     test('POST /api/wallet/send should send payment', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .post('/api/wallet/send')
         .send({ invoice: 'lnbc10u1p3k2v5cpp5...' })
@@ -181,7 +175,7 @@ describe('REST API Integration Tests', () => {
         .send({
           amountSats: 5000,
           phoneNumber: '+1234567890',
-          provider: 'MTN'
+          provider: 'MTN',
         })
         .expect(201);
 
@@ -189,7 +183,7 @@ describe('REST API Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('invoice');
         expect(response.body.data).toHaveProperty('paymentHash');
@@ -203,7 +197,7 @@ describe('REST API Integration Tests', () => {
   describe('Payment API Endpoints', () => {
     test('POST /api/payments/process should process payment', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .post('/api/payments/process')
         .send(testData.payment)
@@ -213,7 +207,7 @@ describe('REST API Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('paymentId');
         expect(response.body.data).toHaveProperty('status');
@@ -225,7 +219,7 @@ describe('REST API Integration Tests', () => {
 
     test('GET /api/payments/:paymentId/status should return payment status', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .get(`/api/payments/${testData.payment.paymentId}/status`)
         .expect(200);
@@ -237,7 +231,7 @@ describe('REST API Integration Tests', () => {
 
     test('POST /api/payments/:paymentId/refund should process refund', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .post(`/api/payments/${testData.payment.paymentId}/refund`)
         .send({ amountSats: 500 })
@@ -247,7 +241,7 @@ describe('REST API Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('paymentId');
         expect(response.body.data).toHaveProperty('status');
@@ -258,7 +252,7 @@ describe('REST API Integration Tests', () => {
 
     test('GET /api/payments/stream/:walletId should stream payments', async () => {
       const testData = testUtils.generateTestData();
-      
+
       const response = await request(app)
         .get(`/api/payments/stream/${testData.payment.walletId}`)
         .query({ limit: 10 })
@@ -267,7 +261,7 @@ describe('REST API Integration Tests', () => {
       expect(response.body).toHaveProperty('success');
       expect(response.body.success).toBe(true);
       expect(response.body).toHaveProperty('data');
-      
+
       if (response.body.data) {
         expect(response.body.data).toHaveProperty('payments');
         expect(response.body.data).toHaveProperty('count');
@@ -311,9 +305,7 @@ describe('REST API Integration Tests', () => {
     });
 
     test('should handle 404 for unknown endpoints', async () => {
-      const response = await request(app)
-        .get('/api/unknown')
-        .expect(404);
+      const response = await request(app).get('/api/unknown').expect(404);
 
       expect(response.body).toHaveProperty('success');
       expect(response.body.success).toBe(false);
@@ -323,13 +315,11 @@ describe('REST API Integration Tests', () => {
 
   describe('Performance Tests', () => {
     test('should handle concurrent requests', async () => {
-      const promises = Array.from({ length: 10 }, () =>
-        request(app).get('/api/wallet/balance')
-      );
+      const promises = Array.from({ length: 10 }, () => request(app).get('/api/wallet/balance'));
 
       const responses = await Promise.all(promises);
 
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('success');
         expect(typeof response.body.success).toBe('boolean');
@@ -338,9 +328,7 @@ describe('REST API Integration Tests', () => {
 
     test('should handle rapid sequential requests', async () => {
       for (let i = 0; i < 5; i++) {
-        const response = await request(app)
-          .get('/api/wallet/balance')
-          .expect(200);
+        const response = await request(app).get('/api/wallet/balance').expect(200);
 
         expect(response.body).toHaveProperty('success');
         expect(typeof response.body.success).toBe('boolean');
@@ -360,9 +348,7 @@ describe('REST API Integration Tests', () => {
     });
 
     test('should return JSON content type', async () => {
-      const response = await request(app)
-        .get('/api/wallet/balance')
-        .expect(200);
+      const response = await request(app).get('/api/wallet/balance').expect(200);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });

@@ -69,19 +69,19 @@ class ApiService {
   private setupInterceptors() {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
-      async (config) => {
+      async config => {
         if (this.authToken) {
           config.headers.Authorization = this.authToken;
         }
         return config;
       },
-      (error) => Promise.reject(error)
+      error => Promise.reject(error)
     );
 
     // Response interceptor for error handling
     this.api.interceptors.response.use(
-      (response) => response,
-      (error) => {
+      response => response,
+      error => {
         console.error('API Error:', error.response?.data || error.message);
         return Promise.reject(error);
       }
@@ -129,7 +129,10 @@ class ApiService {
   }
 
   // Wallet operations
-  public async createWallet(label?: string, mnemonic?: string): Promise<ApiResponse<WalletData>> {
+  public async createWallet(
+    label?: string,
+    mnemonic?: string
+  ): Promise<ApiResponse<WalletData>> {
     try {
       const response = await this.api.post('/api/wallet/create', {
         label: label || 'mobile-wallet',
@@ -156,7 +159,10 @@ class ApiService {
     }
   }
 
-  public async createInvoice(amountSats: number, memo?: string): Promise<ApiResponse<InvoiceData>> {
+  public async createInvoice(
+    amountSats: number,
+    memo?: string
+  ): Promise<ApiResponse<InvoiceData>> {
     try {
       const response = await this.api.post('/api/wallet/invoice/new', {
         amount_sats: amountSats,
@@ -185,7 +191,11 @@ class ApiService {
     }
   }
 
-  public async buyAirtime(amountSats: number, phoneNumber: string, provider?: string): Promise<ApiResponse<AirtimeData>> {
+  public async buyAirtime(
+    amountSats: number,
+    phoneNumber: string,
+    provider?: string
+  ): Promise<ApiResponse<AirtimeData>> {
     try {
       const response = await this.api.post('/api/wallet/airtime/buy', {
         amount_sats: amountSats,
@@ -224,7 +234,9 @@ class ApiService {
     }
   }
 
-  public async getPaymentStatus(paymentId: string): Promise<ApiResponse<TransactionData>> {
+  public async getPaymentStatus(
+    paymentId: string
+  ): Promise<ApiResponse<TransactionData>> {
     try {
       const response = await this.api.get(`/api/payments/${paymentId}/status`);
       return response.data;
@@ -236,11 +248,17 @@ class ApiService {
     }
   }
 
-  public async refundPayment(paymentId: string, amountSats: number): Promise<ApiResponse<TransactionData>> {
+  public async refundPayment(
+    paymentId: string,
+    amountSats: number
+  ): Promise<ApiResponse<TransactionData>> {
     try {
-      const response = await this.api.post(`/api/payments/${paymentId}/refund`, {
-        amount_sats: amountSats,
-      });
+      const response = await this.api.post(
+        `/api/payments/${paymentId}/refund`,
+        {
+          amount_sats: amountSats,
+        }
+      );
       return response.data;
     } catch (error: any) {
       return {

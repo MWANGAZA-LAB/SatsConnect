@@ -42,10 +42,10 @@ class WalletService {
       const wallet = await secureStorage.getWalletData();
       if (wallet) {
         this.walletState.wallet = wallet;
-        
+
         // Load balance
         await this.refreshBalance();
-        
+
         // Load transactions
         await this.loadTransactions();
       }
@@ -78,7 +78,10 @@ class WalletService {
     this.listeners.forEach(listener => listener(this.walletState));
   }
 
-  public async createWallet(label?: string, mnemonic?: string): Promise<boolean> {
+  public async createWallet(
+    label?: string,
+    mnemonic?: string
+  ): Promise<boolean> {
     try {
       this.walletState.isLoading = true;
       this.walletState.error = null;
@@ -90,7 +93,7 @@ class WalletService {
 
       // Create wallet via API
       const response = await apiService.createWallet(label, mnemonic);
-      
+
       if (response.success && response.data) {
         const walletData: WalletData = {
           nodeId: response.data.node_id,
@@ -106,10 +109,10 @@ class WalletService {
         }
 
         this.walletState.wallet = walletData;
-        
+
         // Refresh balance
         await this.refreshBalance();
-        
+
         // Update auth state
         await authService.login(token);
       } else {
@@ -135,13 +138,16 @@ class WalletService {
         return false;
       }
 
-      const response = await apiService.getBalance(this.walletState.wallet.nodeId);
-      
+      const response = await apiService.getBalance(
+        this.walletState.wallet.nodeId
+      );
+
       if (response.success && response.data) {
         this.walletState.balance = {
           confirmedSats: response.data.confirmed_sats,
           lightningSats: response.data.lightning_sats,
-          totalSats: response.data.confirmed_sats + response.data.lightning_sats,
+          totalSats:
+            response.data.confirmed_sats + response.data.lightning_sats,
         };
         this.notifyListeners();
         return true;
@@ -156,10 +162,13 @@ class WalletService {
     }
   }
 
-  public async createInvoice(amountSats: number, memo?: string): Promise<string | null> {
+  public async createInvoice(
+    amountSats: number,
+    memo?: string
+  ): Promise<string | null> {
     try {
       const response = await apiService.createInvoice(amountSats, memo);
-      
+
       if (response.success && response.data) {
         return response.data.invoice;
       } else {
@@ -173,30 +182,35 @@ class WalletService {
     }
   }
 
-  public async sendPayment(invoice: string, amountSats: number, description?: string): Promise<boolean> {
+  public async sendPayment(
+    invoice: string,
+    amountSats: number,
+    description?: string
+  ): Promise<boolean> {
     try {
       this.walletState.isLoading = true;
       this.notifyListeners();
 
       const response = await apiService.sendPayment(invoice);
-      
+
       if (response.success && response.data) {
         // Add transaction to local storage
         const transaction: TransactionData = {
           id: response.data.payment_hash,
           type: 'send',
           amount: amountSats,
-          status: response.data.status === 'SUCCEEDED' ? 'completed' : 'pending',
+          status:
+            response.data.status === 'SUCCEEDED' ? 'completed' : 'pending',
           timestamp: new Date().toISOString(),
           description: description || 'Payment sent',
           paymentHash: response.data.payment_hash,
         };
 
         await this.addTransaction(transaction);
-        
+
         // Refresh balance
         await this.refreshBalance();
-        
+
         this.walletState.isLoading = false;
         this.notifyListeners();
         return true;
@@ -215,13 +229,21 @@ class WalletService {
     }
   }
 
-  public async buyAirtime(amountSats: number, phoneNumber: string, provider?: string): Promise<boolean> {
+  public async buyAirtime(
+    amountSats: number,
+    phoneNumber: string,
+    provider?: string
+  ): Promise<boolean> {
     try {
       this.walletState.isLoading = true;
       this.notifyListeners();
 
-      const response = await apiService.buyAirtime(amountSats, phoneNumber, provider);
-      
+      const response = await apiService.buyAirtime(
+        amountSats,
+        phoneNumber,
+        provider
+      );
+
       if (response.success && response.data) {
         // Add transaction to local storage
         const transaction: TransactionData = {
@@ -236,10 +258,10 @@ class WalletService {
         };
 
         await this.addTransaction(transaction);
-        
+
         // Refresh balance
         await this.refreshBalance();
-        
+
         this.walletState.isLoading = false;
         this.notifyListeners();
         return true;
@@ -278,13 +300,24 @@ class WalletService {
     }
   }
 
-  public async updateTransaction(transactionId: string, updates: Partial<TransactionData>): Promise<boolean> {
+  public async updateTransaction(
+    transactionId: string,
+    updates: Partial<TransactionData>
+  ): Promise<boolean> {
     try {
-      const success = await secureStorage.updateTransaction(transactionId, updates);
+      const success = await secureStorage.updateTransaction(
+        transactionId,
+        updates
+      );
       if (success) {
-        const index = this.walletState.transactions.findIndex(t => t.id === transactionId);
+        const index = this.walletState.transactions.findIndex(
+          t => t.id === transactionId
+        );
         if (index !== -1) {
-          this.walletState.transactions[index] = { ...this.walletState.transactions[index], ...updates };
+          this.walletState.transactions[index] = {
+            ...this.walletState.transactions[index],
+            ...updates,
+          };
           this.notifyListeners();
         }
       }
@@ -307,7 +340,7 @@ class WalletService {
       userId: 'mobile_user',
       timestamp: Date.now(),
     };
-    
+
     return `Bearer ${btoa(JSON.stringify(payload))}`;
   }
 

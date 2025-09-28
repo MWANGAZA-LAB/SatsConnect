@@ -29,10 +29,10 @@ export default function Send() {
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     if (!invoice.trim()) {
       newErrors.invoice = 'Invoice is required';
@@ -55,9 +55,9 @@ export default function Send() {
 
     try {
       setIsLoading(true);
-      
+
       const amountSats = amount ? Math.floor(Number(amount) * 100000000) : 0; // Convert BTC to sats
-      
+
       const success = await walletService.sendPayment(
         invoice,
         amountSats,
@@ -100,7 +100,10 @@ export default function Send() {
     try {
       // In a real app, you'd use Clipboard API
       // For now, we'll just show an alert
-      Alert.alert('Paste', 'Paste functionality will be implemented with clipboard integration');
+      Alert.alert(
+        'Paste',
+        'Paste functionality will be implemented with clipboard integration'
+      );
     } catch (error) {
       Alert.alert('Error', 'Failed to paste from clipboard');
     }
@@ -109,13 +112,13 @@ export default function Send() {
   const formatAmount = (value: string) => {
     // Remove any non-numeric characters except decimal point
     const cleaned = value.replace(/[^0-9.]/g, '');
-    
+
     // Ensure only one decimal point
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       return parts[0] + '.' + parts.slice(1).join('');
     }
-    
+
     return cleaned;
   };
 
@@ -128,11 +131,14 @@ export default function Send() {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Send Bitcoin</Text>
           <Text style={styles.subtitle}>
@@ -166,7 +172,7 @@ export default function Send() {
             label="Amount (BTC) - Optional"
             placeholder="0.001"
             value={amount}
-            onChangeText={(text) => setAmount(formatAmount(text))}
+            onChangeText={text => setAmount(formatAmount(text))}
             keyboardType="numeric"
             error={errors.amount}
           />
@@ -184,10 +190,11 @@ export default function Send() {
         <Card style={styles.infoCard}>
           <Text style={styles.infoTitle}>💡 Payment Tips</Text>
           <Text style={styles.infoText}>
-            • Lightning invoices include the amount, so you don't need to specify it separately{'\n'}
-            • Always verify the recipient before sending{'\n'}
-            • Payments are usually instant but can take a few minutes{'\n'}
-            • Keep your invoice private - anyone with it can see the payment details
+            • Lightning invoices include the amount, so you don't need to
+            specify it separately{'\n'}• Always verify the recipient before
+            sending{'\n'}• Payments are usually instant but can take a few
+            minutes{'\n'}• Keep your invoice private - anyone with it can see
+            the payment details
           </Text>
         </Card>
 
@@ -198,7 +205,7 @@ export default function Send() {
             disabled={!invoice.trim() || isLoading}
             style={styles.sendButton}
           />
-          
+
           <Button
             title="Cancel"
             onPress={() => navigation.goBack()}

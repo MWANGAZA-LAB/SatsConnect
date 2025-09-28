@@ -42,7 +42,10 @@ class SecureStorageService {
   // Wallet data (sensitive - stored in SecureStore)
   async saveWalletData(walletData: WalletData): Promise<boolean> {
     try {
-      await SecureStore.setItemAsync(STORAGE_KEYS.WALLET_DATA, JSON.stringify(walletData));
+      await SecureStore.setItemAsync(
+        STORAGE_KEYS.WALLET_DATA,
+        JSON.stringify(walletData)
+      );
       return true;
     } catch (error) {
       console.error('Failed to save wallet data:', error);
@@ -133,7 +136,10 @@ class SecureStorageService {
   // User preferences (non-sensitive - stored in AsyncStorage)
   async saveUserPreferences(preferences: UserPreferences): Promise<boolean> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(preferences));
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_PREFERENCES,
+        JSON.stringify(preferences)
+      );
       return true;
     } catch (error) {
       console.error('Failed to save user preferences:', error);
@@ -154,7 +160,10 @@ class SecureStorageService {
   // Transactions (non-sensitive - stored in AsyncStorage)
   async saveTransactions(transactions: TransactionData[]): Promise<boolean> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.TRANSACTIONS,
+        JSON.stringify(transactions)
+      );
       return true;
     } catch (error) {
       console.error('Failed to save transactions:', error);
@@ -184,7 +193,10 @@ class SecureStorageService {
     }
   }
 
-  async updateTransaction(transactionId: string, updates: Partial<TransactionData>): Promise<boolean> {
+  async updateTransaction(
+    transactionId: string,
+    updates: Partial<TransactionData>
+  ): Promise<boolean> {
     try {
       const transactions = await this.getTransactions();
       const index = transactions.findIndex(t => t.id === transactionId);

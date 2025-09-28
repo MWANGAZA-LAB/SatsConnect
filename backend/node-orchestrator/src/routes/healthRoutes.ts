@@ -8,11 +8,11 @@ const router = Router();
 router.get('/health', async (req: Request, res: Response) => {
   try {
     const startTime = Date.now();
-    
+
     // Check gRPC engine health
     const engineHealth = await grpcClientService.checkHealth();
     const responseTime = Date.now() - startTime;
-    
+
     const healthStatus = {
       status: engineHealth ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
@@ -25,10 +25,10 @@ router.get('/health', async (req: Request, res: Response) => {
       memory: process.memoryUsage(),
       version: process.env.npm_package_version || '1.0.0',
     };
-    
+
     const statusCode = engineHealth ? 200 : 503;
     res.status(statusCode).json(healthStatus);
-    
+
     if (!engineHealth) {
       logger.warn('Health check failed', { responseTime, engineHealth });
     }
@@ -51,7 +51,7 @@ router.get('/ready', async (req: Request, res: Response) => {
   try {
     // Check if all critical services are ready
     const engineHealth = await grpcClientService.checkHealth();
-    
+
     if (engineHealth) {
       res.status(200).json({
         status: 'ready',
@@ -111,7 +111,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
         port: process.env.PORT,
       },
     };
-    
+
     res.json(metrics);
   } catch (error) {
     logger.error('Metrics collection error', { error: error.message });

@@ -47,9 +47,7 @@ describe('SatsConnect End-to-End Flow', () => {
   describe('Complete User Journey', () => {
     it('should complete full wallet creation and transaction flow', async () => {
       // Step 1: Health Check
-      const healthResponse = await request(app)
-        .get('/health/health')
-        .expect(200);
+      const healthResponse = await request(app).get('/health/health').expect(200);
 
       expect(healthResponse.body.status).toBe('healthy');
       expect(healthResponse.body.services.grpcEngine).toBe('up');
@@ -68,9 +66,7 @@ describe('SatsConnect End-to-End Flow', () => {
       walletId = createWalletResponse.body.data.walletId;
 
       // Step 3: Get Balance
-      const balanceResponse = await request(app)
-        .get(`/api/wallet/balance/${walletId}`)
-        .expect(200);
+      const balanceResponse = await request(app).get(`/api/wallet/balance/${walletId}`).expect(200);
 
       expect(balanceResponse.body.success).toBe(true);
       expect(balanceResponse.body.data.onchainBalance).toBe(1000000);
@@ -155,9 +151,7 @@ describe('SatsConnect End-to-End Flow', () => {
 
     it('should handle error scenarios gracefully', async () => {
       // Test invalid wallet ID
-      await request(app)
-        .get('/api/wallet/balance/invalid-wallet-id')
-        .expect(400);
+      await request(app).get('/api/wallet/balance/invalid-wallet-id').expect(400);
 
       // Test invalid invoice
       await request(app)
@@ -181,17 +175,17 @@ describe('SatsConnect End-to-End Flow', () => {
 
     it('should handle rate limiting', async () => {
       // Make multiple rapid requests to trigger rate limiting
-      const promises = Array(10).fill(null).map(() =>
-        request(app).get('/health/health')
-      );
+      const promises = Array(10)
+        .fill(null)
+        .map(() => request(app).get('/health/health'));
 
       const responses = await Promise.allSettled(promises);
-      
+
       // Some requests should be rate limited
       const rateLimitedResponses = responses.filter(
         (response) => response.status === 'fulfilled' && response.value.status === 429
       );
-      
+
       expect(rateLimitedResponses.length).toBeGreaterThan(0);
     });
 
@@ -210,11 +204,9 @@ describe('SatsConnect End-to-End Flow', () => {
       });
 
       // This should succeed after retries
-      const response = await request(app)
-        .post('/api/wallet/create')
-        .send({
-          label: 'Retry Test Wallet',
-        });
+      const response = await request(app).post('/api/wallet/create').send({
+        label: 'Retry Test Wallet',
+      });
 
       expect(response.status).toBe(200);
       expect(callCount).toBe(3); // Should have retried twice
@@ -251,9 +243,7 @@ describe('SatsConnect End-to-End Flow', () => {
     it('should enforce HTTPS in production', async () => {
       // This would be tested with a production environment
       // For now, we just verify the middleware is in place
-      const response = await request(app)
-        .get('/health/health')
-        .set('X-Forwarded-Proto', 'http');
+      const response = await request(app).get('/health/health').set('X-Forwarded-Proto', 'http');
 
       // In development, this should still work
       expect(response.status).toBe(200);
@@ -263,13 +253,15 @@ describe('SatsConnect End-to-End Flow', () => {
   describe('Performance Tests', () => {
     it('should handle concurrent requests', async () => {
       const concurrentRequests = 50;
-      const promises = Array(concurrentRequests).fill(null).map((_, index) =>
-        request(app)
-          .post('/api/wallet/create')
-          .send({
-            label: `Concurrent Wallet ${index}`,
-          })
-      );
+      const promises = Array(concurrentRequests)
+        .fill(null)
+        .map((_, index) =>
+          request(app)
+            .post('/api/wallet/create')
+            .send({
+              label: `Concurrent Wallet ${index}`,
+            })
+        );
 
       const startTime = Date.now();
       const responses = await Promise.allSettled(promises);
@@ -286,13 +278,11 @@ describe('SatsConnect End-to-End Flow', () => {
     it('should handle large payloads', async () => {
       const largeMemo = 'x'.repeat(10000); // 10KB memo
 
-      const response = await request(app)
-        .post('/api/wallet/invoice/new')
-        .send({
-          walletId: 'test-wallet-123',
-          amount: 1000,
-          memo: largeMemo,
-        });
+      const response = await request(app).post('/api/wallet/invoice/new').send({
+        walletId: 'test-wallet-123',
+        amount: 1000,
+        memo: largeMemo,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);

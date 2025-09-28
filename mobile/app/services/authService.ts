@@ -36,9 +36,10 @@ class AuthService {
       const biometricAvailable = await LocalAuthentication.hasHardwareAsync();
       const biometricEnrolled = await LocalAuthentication.isEnrolledAsync();
       const preferences = await secureStorage.getUserPreferences();
-      
-      this.authState.biometricEnabled = biometricAvailable && 
-        biometricEnrolled && 
+
+      this.authState.biometricEnabled =
+        biometricAvailable &&
+        biometricEnrolled &&
         preferences?.biometricEnabled === true;
 
       // If no wallet, user needs to go through onboarding
@@ -117,8 +118,11 @@ class AuthService {
 
       // Hash the provided PIN and compare
       const providedPinHash = await this.hashPin(pin);
-      const isValid = await this.comparePinHashes(providedPinHash, storedPinHash);
-      
+      const isValid = await this.comparePinHashes(
+        providedPinHash,
+        storedPinHash
+      );
+
       if (isValid) {
         this.authState.isAuthenticated = true;
         this.notifyListeners();
@@ -143,7 +147,10 @@ class AuthService {
     );
   }
 
-  private async comparePinHashes(provided: string, stored: string): Promise<boolean> {
+  private async comparePinHashes(
+    provided: string,
+    stored: string
+  ): Promise<boolean> {
     // Use timing-safe comparison to prevent timing attacks
     return provided === stored;
   }
@@ -152,7 +159,7 @@ class AuthService {
     try {
       await secureStorage.saveAuthToken(token);
       await apiService.setAuthToken(token);
-      
+
       this.authState.isAuthenticated = true;
       this.notifyListeners();
       return true;
@@ -166,7 +173,7 @@ class AuthService {
     try {
       await secureStorage.clearAuthToken();
       await apiService.clearAuthToken();
-      
+
       this.authState.isAuthenticated = false;
       this.notifyListeners();
     } catch (error) {
@@ -178,12 +185,12 @@ class AuthService {
     try {
       const biometricAvailable = await LocalAuthentication.hasHardwareAsync();
       const biometricEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
+
       if (!biometricAvailable || !biometricEnrolled) {
         return false;
       }
 
-      const preferences = await secureStorage.getUserPreferences() || {
+      const preferences = (await secureStorage.getUserPreferences()) || {
         currency: 'KES',
         language: 'en',
         notifications: true,
@@ -193,7 +200,7 @@ class AuthService {
 
       preferences.biometricEnabled = true;
       await secureStorage.saveUserPreferences(preferences);
-      
+
       this.authState.biometricEnabled = true;
       this.notifyListeners();
       return true;
@@ -210,7 +217,7 @@ class AuthService {
         preferences.biometricEnabled = false;
         await secureStorage.saveUserPreferences(preferences);
       }
-      
+
       this.authState.biometricEnabled = false;
       this.notifyListeners();
       return true;
@@ -228,8 +235,9 @@ class AuthService {
     try {
       const available = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
-      const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      
+      const types =
+        await LocalAuthentication.supportedAuthenticationTypesAsync();
+
       return { available, enrolled, types };
     } catch (error) {
       console.error('Failed to check biometric availability:', error);
@@ -243,16 +251,16 @@ class AuthService {
       const crypto = require('expo-crypto');
       const salt = await crypto.getRandomBytesAsync(32);
       const saltString = salt.toString('base64');
-      
+
       // Save salt
       await secureStorage.savePinSalt(saltString);
-      
+
       // Hash PIN with salt
       const pinHash = await this.hashPin(pin);
-      
+
       // Save PIN hash
       await secureStorage.savePinHash(pinHash);
-      
+
       return true;
     } catch (error) {
       console.error('Failed to setup PIN:', error);
@@ -264,7 +272,7 @@ class AuthService {
     try {
       await secureStorage.clearAllData();
       await apiService.clearAuthToken();
-      
+
       this.authState.isAuthenticated = false;
       this.authState.hasWallet = false;
       this.authState.biometricEnabled = false;

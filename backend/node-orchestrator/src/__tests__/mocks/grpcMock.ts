@@ -8,7 +8,7 @@ export const mockWalletClient = {
       } else {
         callback(null, {
           nodeId: 'mock-node-id-' + Date.now(),
-          address: 'tb1qmock' + Math.random().toString(36).substring(7)
+          address: 'tb1qmock' + Math.random().toString(36).substring(7),
         });
       }
     }, 100);
@@ -18,7 +18,7 @@ export const mockWalletClient = {
     setTimeout(() => {
       callback(null, {
         confirmedSats: '1000000',
-        lightningSats: '500000'
+        lightningSats: '500000',
       });
     }, 100);
   },
@@ -31,7 +31,7 @@ export const mockWalletClient = {
         callback(null, {
           invoice: 'lnbc' + request.amountSats + 'u1p3k2v5cpp5' + Math.random().toString(36),
           paymentHash: 'mock-payment-hash-' + Date.now(),
-          amountSats: request.amountSats
+          amountSats: request.amountSats,
         });
       }
     }, 100);
@@ -44,7 +44,7 @@ export const mockWalletClient = {
       } else {
         callback(null, {
           paymentHash: 'mock-payment-hash-' + Date.now(),
-          status: 'SUCCEEDED'
+          status: 'SUCCEEDED',
         });
       }
     }, 100);
@@ -57,10 +57,10 @@ export const mockWalletClient = {
         paymentHash: 'mock-airtime-hash-' + Date.now(),
         amountSats: request.amountSats,
         phoneNumber: request.phoneNumber,
-        provider: request.provider || 'MTN'
+        provider: request.provider || 'MTN',
       });
     }, 100);
-  }
+  },
 };
 
 export const mockPaymentClient = {
@@ -74,7 +74,7 @@ export const mockPaymentClient = {
           status: 'COMPLETED',
           amountSats: request.amountSats,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         });
       }
     }, 100);
@@ -88,7 +88,7 @@ export const mockPaymentClient = {
         message: 'Payment processed successfully',
         amountSats: '1000',
         paymentHash: 'mock-hash-' + Date.now(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }, 100);
   },
@@ -99,7 +99,7 @@ export const mockPaymentClient = {
         paymentId: request.paymentId,
         status: 'REFUNDED',
         refundAmountSats: request.amountSats,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
     }, 100);
   },
@@ -117,26 +117,26 @@ export const mockPaymentClient = {
                   status: 'COMPLETED',
                   amountSats: '1000',
                   paymentHash: 'mock-hash-1',
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
                 },
                 {
-                  paymentId: 'mock-payment-2', 
+                  paymentId: 'mock-payment-2',
                   status: 'PENDING',
                   amountSats: '2000',
                   paymentHash: 'mock-hash-2',
-                  timestamp: new Date().toISOString()
-                }
+                  timestamp: new Date().toISOString(),
+                },
               ],
-              count: 2
+              count: 2,
             });
           }, 100);
         }
         if (event === 'end') {
           setTimeout(() => handler({}), 200);
         }
-      }
+      },
     };
-  }
+  },
 };
 
 export function createMockWalletClient() {
@@ -147,16 +147,20 @@ export function createMockPaymentClient() {
   return mockPaymentClient;
 }
 
-export function handleMockGrpcError(error: any): { success: boolean; error?: string; code?: number } {
+export function handleMockGrpcError(error: any): {
+  success: boolean;
+  error?: string;
+  code?: number;
+} {
   if (!error) {
     return { success: true };
   }
 
   const grpcError = error as { code?: number; message?: string; details?: string };
-  
+
   return {
     success: false,
     error: grpcError.message || grpcError.details || 'Unknown gRPC error',
-    code: grpcError.code || 2 // Unknown status
+    code: grpcError.code || 2, // Unknown status
   };
 }

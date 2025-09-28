@@ -20,7 +20,10 @@ import { QRScanner } from '../components/QRScanner';
 import { theme } from '../theme';
 import { walletService } from '../services/walletService';
 
-type BillPaymentNavigationProp = StackNavigationProp<RootStackParamList, 'BillPayment'>;
+type BillPaymentNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'BillPayment'
+>;
 
 const BILL_TYPES = [
   { id: 'kplc', name: 'KPLC (Electricity)', icon: '⚡', color: '#FFD700' },
@@ -41,10 +44,10 @@ export default function BillPayment() {
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     if (!accountNumber.trim()) {
       newErrors.accountNumber = 'Account number is required';
@@ -67,9 +70,9 @@ export default function BillPayment() {
 
     try {
       setIsLoading(true);
-      
+
       const amountSats = Math.floor(Number(amount) * 100000000); // Convert BTC to sats
-      
+
       // For now, we'll use the buyAirtime function as a placeholder
       // In a real app, you'd have a dedicated bill payment function
       const success = await walletService.buyAirtime(
@@ -95,7 +98,10 @@ export default function BillPayment() {
           ]
         );
       } else {
-        Alert.alert('Error', 'Failed to process bill payment. Please try again.');
+        Alert.alert(
+          'Error',
+          'Failed to process bill payment. Please try again.'
+        );
       }
     } catch (error) {
       console.error('Pay bill error:', error);
@@ -123,13 +129,13 @@ export default function BillPayment() {
   const formatAmount = (value: string) => {
     // Remove any non-numeric characters except decimal point
     const cleaned = value.replace(/[^0-9.]/g, '');
-    
+
     // Ensure only one decimal point
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       return parts[0] + '.' + parts.slice(1).join('');
     }
-    
+
     return cleaned;
   };
 
@@ -159,11 +165,14 @@ export default function BillPayment() {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Pay Bills</Text>
           <Text style={styles.subtitle}>
@@ -175,7 +184,7 @@ export default function BillPayment() {
           <View style={styles.billTypeSection}>
             <Text style={styles.sectionLabel}>Bill Type</Text>
             <View style={styles.billTypeGrid}>
-              {BILL_TYPES.map((bill) => (
+              {BILL_TYPES.map(bill => (
                 <TouchableOpacity
                   key={bill.id}
                   style={[
@@ -216,7 +225,7 @@ export default function BillPayment() {
             label="Amount (BTC)"
             placeholder="0.001"
             value={amount}
-            onChangeText={(text) => setAmount(formatAmount(text))}
+            onChangeText={text => setAmount(formatAmount(text))}
             keyboardType="numeric"
             error={errors.amount}
           />
@@ -241,15 +250,16 @@ export default function BillPayment() {
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Account Number:</Text>
-            <Text style={styles.summaryValue}>{accountNumber || 'Not specified'}</Text>
+            <Text style={styles.summaryValue}>
+              {accountNumber || 'Not specified'}
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Amount:</Text>
             <Text style={styles.summaryValue}>
-              {amount 
+              {amount
                 ? `${formatSats(Number(amount) * 100000000)} (${formatKES(Number(amount) * 100000000)})`
-                : 'Not specified'
-              }
+                : 'Not specified'}
             </Text>
           </View>
         </Card>
@@ -257,21 +267,21 @@ export default function BillPayment() {
         <Card style={styles.infoCard}>
           <Text style={styles.infoTitle}>💡 Bill Payment Info</Text>
           <Text style={styles.infoText}>
-            • Payments are usually processed within 5-10 minutes{'\n'}
-            • You can scan QR codes from your bill statements{'\n'}
-            • Keep your payment receipt for reference{'\n'}
-            • Contact customer service if payment is not reflected{'\n'}
-            • All transactions are processed via Lightning Network
+            • Payments are usually processed within 5-10 minutes{'\n'}• You can
+            scan QR codes from your bill statements{'\n'}• Keep your payment
+            receipt for reference{'\n'}• Contact customer service if payment is
+            not reflected{'\n'}• All transactions are processed via Lightning
+            Network
           </Text>
         </Card>
 
         <Card style={styles.warningCard}>
           <Text style={styles.warningTitle}>⚠️ Important</Text>
           <Text style={styles.warningText}>
-            • Double-check your account number before paying{'\n'}
-            • Ensure you have sufficient balance for the payment{'\n'}
-            • Keep your payment confirmation for records{'\n'}
-            • Contact the service provider if you have issues
+            • Double-check your account number before paying{'\n'}• Ensure you
+            have sufficient balance for the payment{'\n'}• Keep your payment
+            confirmation for records{'\n'}• Contact the service provider if you
+            have issues
           </Text>
         </Card>
 
@@ -282,7 +292,7 @@ export default function BillPayment() {
             disabled={!accountNumber.trim() || !amount.trim() || isLoading}
             style={styles.payButton}
           />
-          
+
           <Button
             title="Cancel"
             onPress={() => navigation.goBack()}

@@ -54,12 +54,20 @@ describe('WalletService', () => {
       mockedSecureStorage.saveWalletData.mockResolvedValue(true);
       mockedSecureStorage.saveMnemonic.mockResolvedValue(true);
 
-      const result = await walletService.createWallet('test_label', 'test_mnemonic');
+      const result = await walletService.createWallet(
+        'test_label',
+        'test_mnemonic'
+      );
 
       expect(result).toBe(true);
-      expect(mockedApiService.createWallet).toHaveBeenCalledWith('test_label', 'test_mnemonic');
+      expect(mockedApiService.createWallet).toHaveBeenCalledWith(
+        'test_label',
+        'test_mnemonic'
+      );
       expect(mockedSecureStorage.saveWalletData).toHaveBeenCalled();
-      expect(mockedSecureStorage.saveMnemonic).toHaveBeenCalledWith('test_mnemonic');
+      expect(mockedSecureStorage.saveMnemonic).toHaveBeenCalledWith(
+        'test_mnemonic'
+      );
     });
 
     it('should handle wallet creation failure', async () => {
@@ -68,7 +76,10 @@ describe('WalletService', () => {
         error: 'Creation failed',
       });
 
-      const result = await walletService.createWallet('test_label', 'test_mnemonic');
+      const result = await walletService.createWallet(
+        'test_label',
+        'test_mnemonic'
+      );
 
       expect(result).toBe(false);
     });
@@ -153,7 +164,10 @@ describe('WalletService', () => {
       const result = await walletService.createInvoice(1000, 'test memo');
 
       expect(result).toBe('lnbc1000n1p...');
-      expect(mockedApiService.createInvoice).toHaveBeenCalledWith(1000, 'test memo');
+      expect(mockedApiService.createInvoice).toHaveBeenCalledWith(
+        1000,
+        'test memo'
+      );
     });
 
     it('should handle invoice creation failure', async () => {
@@ -180,10 +194,16 @@ describe('WalletService', () => {
 
       mockedSecureStorage.addTransaction.mockResolvedValue(true);
 
-      const result = await walletService.sendPayment('lnbc1000n1p...', 1000, 'test payment');
+      const result = await walletService.sendPayment(
+        'lnbc1000n1p...',
+        1000,
+        'test payment'
+      );
 
       expect(result).toBe(true);
-      expect(mockedApiService.sendPayment).toHaveBeenCalledWith('lnbc1000n1p...');
+      expect(mockedApiService.sendPayment).toHaveBeenCalledWith(
+        'lnbc1000n1p...'
+      );
       expect(mockedSecureStorage.addTransaction).toHaveBeenCalled();
     });
 
@@ -193,7 +213,11 @@ describe('WalletService', () => {
         error: 'Payment failed',
       });
 
-      const result = await walletService.sendPayment('lnbc1000n1p...', 1000, 'test payment');
+      const result = await walletService.sendPayment(
+        'lnbc1000n1p...',
+        1000,
+        'test payment'
+      );
 
       expect(result).toBe(false);
     });
@@ -212,10 +236,18 @@ describe('WalletService', () => {
 
       mockedSecureStorage.addTransaction.mockResolvedValue(true);
 
-      const result = await walletService.buyAirtime(1000, '+254700000000', 'safaricom');
+      const result = await walletService.buyAirtime(
+        1000,
+        '+254700000000',
+        'safaricom'
+      );
 
       expect(result).toBe(true);
-      expect(mockedApiService.buyAirtime).toHaveBeenCalledWith(1000, '+254700000000', 'safaricom');
+      expect(mockedApiService.buyAirtime).toHaveBeenCalledWith(
+        1000,
+        '+254700000000',
+        'safaricom'
+      );
       expect(mockedSecureStorage.addTransaction).toHaveBeenCalled();
     });
 
@@ -225,7 +257,11 @@ describe('WalletService', () => {
         error: 'Airtime purchase failed',
       });
 
-      const result = await walletService.buyAirtime(1000, '+254700000000', 'safaricom');
+      const result = await walletService.buyAirtime(
+        1000,
+        '+254700000000',
+        'safaricom'
+      );
 
       expect(result).toBe(false);
     });

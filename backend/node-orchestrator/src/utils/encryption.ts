@@ -35,18 +35,18 @@ export class EncryptionService {
       const iv = crypto.randomBytes(IV_LENGTH);
       const salt = crypto.randomBytes(SALT_LENGTH);
       const key = this.deriveKey(config.jwt.secret, salt);
-      
+
       const cipher = crypto.createCipher(ALGORITHM, key);
       cipher.setAAD(salt as Uint8Array);
-      
+
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      
+
       const tag = cipher.getAuthTag();
-      
+
       // Combine salt + iv + tag + encrypted data
       const combined = Buffer.concat([salt, iv, tag, Buffer.from(encrypted, 'hex')] as Buffer[]);
-      
+
       return combined.toString('base64');
     } catch (error) {
       logger.error('Encryption failed', { error: error.message });
@@ -57,22 +57,22 @@ export class EncryptionService {
   public decrypt(encryptedData: string): string {
     try {
       const combined = Buffer.from(encryptedData, 'base64');
-      
+
       // Extract components
       const salt = combined.subarray(0, SALT_LENGTH);
       const iv = combined.subarray(SALT_LENGTH, TAG_POSITION);
       const tag = combined.subarray(TAG_POSITION, ENCRYPTED_POSITION);
       const encrypted = combined.subarray(ENCRYPTED_POSITION);
-      
+
       const key = this.deriveKey(config.jwt.secret, salt);
-      
+
       const decipher = crypto.createDecipher(ALGORITHM, key);
       decipher.setAAD(salt);
       decipher.setAuthTag(tag);
-      
+
       let decrypted = decipher.update(encrypted, null, 'utf8');
       decrypted += decipher.final('utf8');
-      
+
       return decrypted;
     } catch (error) {
       logger.error('Decryption failed', { error: error.message });
@@ -123,12 +123,14 @@ export const redactSensitiveData = (data: unknown): unknown => {
     const redacted: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
       const lowerKey = key.toLowerCase();
-      if (lowerKey.includes('password') || 
-          lowerKey.includes('secret') || 
-          lowerKey.includes('key') || 
-          lowerKey.includes('token') ||
-          lowerKey.includes('phone') ||
-          lowerKey.includes('email')) {
+      if (
+        lowerKey.includes('password') ||
+        lowerKey.includes('secret') ||
+        lowerKey.includes('key') ||
+        lowerKey.includes('token') ||
+        lowerKey.includes('phone') ||
+        lowerKey.includes('email')
+      ) {
         redacted[key] = redactSensitiveData(value);
       } else {
         redacted[key] = value;
@@ -152,7 +154,7 @@ export const loadSecureConfig = () => {
   ];
 
   const secureConfig: Record<string, string> = {};
-  
+
   for (const key of sensitiveKeys) {
     const value = process.env[key];
     if (value) {

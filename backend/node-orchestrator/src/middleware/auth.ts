@@ -28,7 +28,11 @@ const authAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_AUTH_ATTEMPTS = 5;
 const AUTH_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
-export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const authenticateToken = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
@@ -61,7 +65,7 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
 
   try {
     const decoded = jwt.verify(token, config.jwt.secret) as JWTPayload;
-    
+
     // Validate token structure
     if (!decoded.id || typeof decoded.id !== 'string') {
       recordAuthAttempt(clientIp, false);
@@ -84,13 +88,13 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
       walletId: decoded.walletId,
       permissions: decoded.permissions || [],
     };
-    
+
     logger.debug('User authenticated successfully', {
       userId: decoded.id,
       role: decoded.role,
       ip: clientIp,
     });
-    
+
     next();
   } catch (error) {
     recordAuthAttempt(clientIp, false);
@@ -100,7 +104,7 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
       userAgent: req.get('User-Agent'),
       tokenLength: token.length,
     });
-    
+
     res.status(403).json({
       success: false,
       error: 'Invalid or expired token',
@@ -116,7 +120,11 @@ export const generateToken = (payload: Omit<JWTPayload, 'iat' | 'exp'>): string 
   } as jwt.SignOptions);
 };
 
-export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const optionalAuth = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -139,7 +147,7 @@ export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: Nex
     // Invalid token, but continue without authentication
     logger.debug('Optional auth failed: Invalid token', { error: error.message });
   }
-  
+
   next();
 };
 

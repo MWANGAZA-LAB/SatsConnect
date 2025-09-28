@@ -57,8 +57,11 @@ describe('ApiService', () => {
       };
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
-      const result = await apiService.createWallet('test_label', 'test_mnemonic');
-      
+      const result = await apiService.createWallet(
+        'test_label',
+        'test_mnemonic'
+      );
+
       expect(result.success).toBe(true);
       expect(result.data?.node_id).toBe('test_node_id');
       expect(result.data?.address).toBe('test_address');
@@ -73,8 +76,11 @@ describe('ApiService', () => {
       };
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
-      const result = await apiService.createWallet('test_label', 'test_mnemonic');
-      
+      const result = await apiService.createWallet(
+        'test_label',
+        'test_mnemonic'
+      );
+
       expect(result.success).toBe(false);
       expect(result.error).toBe('Wallet creation failed');
     });
@@ -94,7 +100,7 @@ describe('ApiService', () => {
       mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
       const result = await apiService.getBalance('test_wallet_id');
-      
+
       expect(result.success).toBe(true);
       expect(result.data?.confirmed_sats).toBe(1000000);
       expect(result.data?.lightning_sats).toBe(500000);
@@ -115,7 +121,7 @@ describe('ApiService', () => {
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
       const result = await apiService.createInvoice(1000, 'test memo');
-      
+
       expect(result.success).toBe(true);
       expect(result.data?.invoice).toBe('lnbc1000n1p...');
       expect(result.data?.payment_hash).toBe('test_hash');
@@ -136,7 +142,7 @@ describe('ApiService', () => {
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
       const result = await apiService.sendPayment('lnbc1000n1p...');
-      
+
       expect(result.success).toBe(true);
       expect(result.data?.payment_hash).toBe('test_hash');
       expect(result.data?.status).toBe('SUCCEEDED');
@@ -157,8 +163,12 @@ describe('ApiService', () => {
       };
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
 
-      const result = await apiService.buyAirtime(1000, '+254700000000', 'safaricom');
-      
+      const result = await apiService.buyAirtime(
+        1000,
+        '+254700000000',
+        'safaricom'
+      );
+
       expect(result.success).toBe(true);
       expect(result.data?.invoice).toBe('lnbc1000n1p...');
       expect(result.data?.status).toBe('PENDING');

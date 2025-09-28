@@ -53,27 +53,29 @@ describe('MpesaService', () => {
       },
     };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const result = await mpesaService.initiateStkPush({
       phoneNumber: '254712345678',
       amount: 1000,
       accountReference: 'test_ref',
       transactionDesc: 'Test payment',
     });
-    
+
     expect(result.ResponseCode).toBe('0');
     expect(result.CheckoutRequestID).toBe('ws_CO_123456789');
   });
 
   it('should handle STK push error', async () => {
     mockAxiosInstance.post.mockRejectedValueOnce(new Error('STK push failed'));
-    
-    await expect(mpesaService.initiateStkPush({
-      phoneNumber: '254712345678',
-      amount: 1000,
-      accountReference: 'test_ref',
-      transactionDesc: 'Test payment',
-    })).rejects.toThrow('STK push failed');
+
+    await expect(
+      mpesaService.initiateStkPush({
+        phoneNumber: '254712345678',
+        amount: 1000,
+        accountReference: 'test_ref',
+        transactionDesc: 'Test payment',
+      })
+    ).rejects.toThrow('STK push failed');
   });
 
   it('should query STK push status successfully', async () => {
@@ -88,18 +90,23 @@ describe('MpesaService', () => {
       },
     };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const result = await mpesaService.queryStkPushStatus('ws_CO_123456789');
-    
+
     expect(result.ResponseCode).toBe('0');
     expect(result.ResultCode).toBe('0');
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/mpesa/stkpushquery/v1/query', expect.any(Object));
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+      '/mpesa/stkpushquery/v1/query',
+      expect.any(Object)
+    );
   });
 
   it('should handle STK push status query error', async () => {
     mockAxiosInstance.post.mockRejectedValueOnce(new Error('Status check failed'));
-    
-    await expect(mpesaService.queryStkPushStatus('ws_CO_123456789')).rejects.toThrow('Status check failed');
+
+    await expect(mpesaService.queryStkPushStatus('ws_CO_123456789')).rejects.toThrow(
+      'Status check failed'
+    );
   });
 
   it('should initiate payout successfully', async () => {
@@ -112,34 +119,39 @@ describe('MpesaService', () => {
       },
     };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const result = await mpesaService.initiatePayout({
       phoneNumber: '254712345678',
       amount: 500,
       accountReference: 'test_ref',
       transactionDesc: 'Test payout',
     });
-    
+
     expect(result.ResponseCode).toBe('0');
     expect(result.ConversationID).toBe('conv_456');
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/mpesa/b2c/v1/paymentrequest', expect.any(Object));
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+      '/mpesa/b2c/v1/paymentrequest',
+      expect.any(Object)
+    );
   });
 
   it('should handle payout error', async () => {
     mockAxiosInstance.post.mockRejectedValueOnce(new Error('Payout failed'));
-    
-    await expect(mpesaService.initiatePayout({
-      phoneNumber: '254712345678',
-      amount: 500,
-      accountReference: 'test_ref',
-      transactionDesc: 'Test payout',
-    })).rejects.toThrow('Payout failed');
+
+    await expect(
+      mpesaService.initiatePayout({
+        phoneNumber: '254712345678',
+        amount: 500,
+        accountReference: 'test_ref',
+        transactionDesc: 'Test payout',
+      })
+    ).rejects.toThrow('Payout failed');
   });
 
   it('should validate phone number format', () => {
     const validPhone = '254712345678';
     const invalidPhone = '123456789';
-    
+
     // This would be tested through the service methods that validate phone numbers
     expect(validPhone.startsWith('254')).toBe(true);
     expect(invalidPhone.startsWith('254')).toBe(false);
@@ -149,26 +161,28 @@ describe('MpesaService', () => {
     const timeoutError = new Error('timeout of 5000ms exceeded');
     timeoutError.name = 'TimeoutError';
     mockAxiosInstance.post.mockRejectedValueOnce(timeoutError);
-    
-    await expect(mpesaService.initiateStkPush({
-      phoneNumber: '254712345678',
-      amount: 1000,
-      accountReference: 'test_ref',
-      transactionDesc: 'Test payment',
-    })).rejects.toThrow('timeout of 5000ms exceeded');
+
+    await expect(
+      mpesaService.initiateStkPush({
+        phoneNumber: '254712345678',
+        amount: 1000,
+        accountReference: 'test_ref',
+        transactionDesc: 'Test payment',
+      })
+    ).rejects.toThrow('timeout of 5000ms exceeded');
   });
 
   it('should handle invalid response format', async () => {
     const mockResponse = { data: { invalid: 'response' } };
     mockAxiosInstance.post.mockResolvedValueOnce(mockResponse);
-    
+
     const result = await mpesaService.initiateStkPush({
       phoneNumber: '254712345678',
       amount: 1000,
       accountReference: 'test_ref',
       transactionDesc: 'Test payment',
     });
-    
+
     expect(result).toBeDefined();
   });
 });

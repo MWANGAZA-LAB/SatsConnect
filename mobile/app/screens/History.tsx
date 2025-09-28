@@ -21,9 +21,13 @@ type HistoryNavigationProp = StackNavigationProp<RootStackParamList, 'History'>;
 
 export default function History() {
   const navigation = useNavigation<HistoryNavigationProp>();
-  const [walletState, setWalletState] = useState(walletService.getWalletState());
+  const [walletState, setWalletState] = useState(
+    walletService.getWalletState()
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'send' | 'receive' | 'airtime' | 'bill'>('all');
+  const [filter, setFilter] = useState<
+    'all' | 'send' | 'receive' | 'airtime' | 'bill'
+  >('all');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -61,7 +65,8 @@ export default function History() {
       return 'Just now';
     } else if (diffInHours < 24) {
       return `${Math.floor(diffInHours)}h ago`;
-    } else if (diffInHours < 168) { // 7 days
+    } else if (diffInHours < 168) {
+      // 7 days
       return `${Math.floor(diffInHours / 24)}d ago`;
     } else {
       return date.toLocaleDateString();
@@ -143,7 +148,8 @@ export default function History() {
       <View style={styles.header}>
         <Text style={styles.title}>Transaction History</Text>
         <Text style={styles.subtitle}>
-          {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
+          {filteredTransactions.length} transaction
+          {filteredTransactions.length !== 1 ? 's' : ''}
         </Text>
       </View>
 
@@ -157,19 +163,22 @@ export default function History() {
               { key: 'receive', label: 'Received' },
               { key: 'airtime', label: 'Airtime' },
               { key: 'bill', label: 'Bills' },
-            ].map((filterOption) => (
+            ].map(filterOption => (
               <TouchableOpacity
                 key={filterOption.key}
                 style={[
                   styles.filterButton,
                   filter === filterOption.key && styles.filterButtonActive,
                 ]}
-                onPress={() => handleFilterChange(filterOption.key as typeof filter)}
+                onPress={() =>
+                  handleFilterChange(filterOption.key as typeof filter)
+                }
               >
                 <Text
                   style={[
                     styles.filterButtonText,
-                    filter === filterOption.key && styles.filterButtonTextActive,
+                    filter === filterOption.key &&
+                      styles.filterButtonTextActive,
                   ]}
                 >
                   {filterOption.label}
@@ -189,7 +198,7 @@ export default function History() {
       >
         {filteredTransactions.length > 0 ? (
           <View style={styles.transactionList}>
-            {filteredTransactions.map((transaction) => (
+            {filteredTransactions.map(transaction => (
               <TouchableOpacity
                 key={transaction.id}
                 onPress={() => handleTransactionPress(transaction)}
@@ -201,24 +210,26 @@ export default function History() {
                         {getTransactionIcon(transaction.type)}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.transactionDetails}>
                       <Text style={styles.transactionType}>
-                        {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                        {transaction.type.charAt(0).toUpperCase() +
+                          transaction.type.slice(1)}
                       </Text>
                       <Text style={styles.transactionDescription}>
                         {transaction.description || 'No description'}
                       </Text>
                     </View>
-                    
+
                     <View style={styles.transactionAmount}>
                       <Text
                         style={[
                           styles.transactionAmountText,
                           {
-                            color: transaction.type === 'send' 
-                              ? theme.colors.error 
-                              : theme.colors.success,
+                            color:
+                              transaction.type === 'send'
+                                ? theme.colors.error
+                                : theme.colors.success,
                           },
                         ]}
                       >
@@ -230,7 +241,7 @@ export default function History() {
                       </Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.transactionFooter}>
                     <View style={styles.statusContainer}>
                       <Text style={styles.statusIcon}>
@@ -242,10 +253,11 @@ export default function History() {
                           { color: getStatusColor(transaction.status) },
                         ]}
                       >
-                        {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        {transaction.status.charAt(0).toUpperCase() +
+                          transaction.status.slice(1)}
                       </Text>
                     </View>
-                    
+
                     {transaction.paymentHash && (
                       <Text style={styles.paymentHash}>
                         {transaction.paymentHash.substring(0, 16)}...
@@ -260,15 +272,16 @@ export default function History() {
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateIcon}>📊</Text>
             <Text style={styles.emptyStateTitle}>
-              {filter === 'all' ? 'No transactions yet' : `No ${filter} transactions`}
+              {filter === 'all'
+                ? 'No transactions yet'
+                : `No ${filter} transactions`}
             </Text>
             <Text style={styles.emptyStateText}>
-              {filter === 'all' 
+              {filter === 'all'
                 ? 'Your transaction history will appear here'
-                : `No ${filter} transactions found. Try a different filter.`
-              }
+                : `No ${filter} transactions found. Try a different filter.`}
             </Text>
-            
+
             {filter === 'all' && (
               <View style={styles.emptyStateActions}>
                 <Button

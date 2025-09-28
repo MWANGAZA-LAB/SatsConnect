@@ -6,18 +6,18 @@ let rustEngineProcess: ChildProcess | null = null;
 
 beforeAll(async () => {
   console.log('🚀 Starting Rust Engine for E2E tests...');
-  
+
   // Start the Rust engine process
   rustEngineProcess = spawn('cargo', ['run'], {
     cwd: '../rust-engine',
     stdio: 'pipe',
-    shell: true
+    shell: true,
   });
 
   // Wait for the engine to be ready
   let attempts = 0;
   const maxAttempts = 30;
-  
+
   while (attempts < maxAttempts) {
     try {
       const isHealthy = await checkEngineHealth();
@@ -28,8 +28,8 @@ beforeAll(async () => {
     } catch (error) {
       // Engine not ready yet, continue waiting
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     attempts++;
   }
 
@@ -40,12 +40,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   console.log('🛑 Stopping Rust Engine...');
-  
+
   if (rustEngineProcess) {
     rustEngineProcess.kill('SIGTERM');
-    
+
     // Wait for graceful shutdown
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       if (rustEngineProcess) {
         rustEngineProcess.on('exit', resolve);
         setTimeout(resolve, 5000); // Force exit after 5 seconds
@@ -67,7 +67,7 @@ export const testUtils = {
       } catch (error) {
         // Continue waiting
       }
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       attempts++;
     }
     return false;
@@ -76,20 +76,21 @@ export const testUtils = {
   generateTestData() {
     return {
       wallet: {
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-        label: 'test-wallet'
+        mnemonic:
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        label: 'test-wallet',
       },
       invoice: {
         amountSats: 1000,
-        memo: 'Test payment'
+        memo: 'Test payment',
       },
       payment: {
         paymentId: `test-pay-${Date.now()}`,
         walletId: `test-wallet-${Date.now()}`,
         amountSats: 1000,
         invoice: 'lnbc10u1p3k2v5cpp5...', // Mock invoice
-        description: 'Test payment'
-      }
+        description: 'Test payment',
+      },
     };
-  }
+  },
 };

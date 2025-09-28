@@ -24,12 +24,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
-  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     if (scanned) return;
-    
+
     setScanned(true);
     onScan(data);
-    
+
     // Reset scanned state after 2 seconds
     setTimeout(() => {
       setScanned(false);
@@ -80,12 +86,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           </View>
           <View style={styles.bottomOverlay} />
         </View>
-        
+
         <View style={styles.controls}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.instructions}>
             <Text style={styles.instructionText}>
               Position the QR code within the frame

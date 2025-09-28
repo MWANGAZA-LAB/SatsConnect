@@ -57,7 +57,9 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? theme.colors.white : theme.colors.primary}
+          color={
+            variant === 'primary' ? theme.colors.white : theme.colors.primary
+          }
           size="small"
         />
       ) : (
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.spacing.button.borderRadius,
     ...theme.shadows.small,
   },
-  
+
   // Variants
   primary: {
     backgroundColor: theme.colors.primary,
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
   ghost: {
     backgroundColor: 'transparent',
   },
-  
+
   // Sizes
   small: {
     paddingHorizontal: theme.spacing.sm,
@@ -111,12 +113,12 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     minHeight: 52,
   },
-  
+
   // States
   disabled: {
     opacity: 0.5,
   },
-  
+
   // Text styles
   text: {
     fontWeight: '500',
@@ -134,7 +136,7 @@ const styles = StyleSheet.create({
   ghostText: {
     color: theme.colors.primary,
   },
-  
+
   // Text sizes
   smallText: {
     fontSize: theme.typography.fontSize.sm,
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
   largeText: {
     fontSize: theme.typography.fontSize.lg,
   },
-  
+
   disabledText: {
     opacity: 0.7,
   },

@@ -33,15 +33,13 @@ describe('Fiat Integration Tests', () => {
       const mockQueueService = require('../../services/queueService');
       mockQueueService.addMpesaBuyJob.mockResolvedValue({ id: 'test_job_id' });
 
-      const response = await request(app)
-        .post('/api/fiat/mpesa/buy')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 1000,
-          walletId: 'test_wallet_id',
-          accountReference: 'test_ref',
-          transactionDesc: 'Bitcoin Purchase',
-        });
+      const response = await request(app).post('/api/fiat/mpesa/buy').send({
+        phoneNumber: '254712345678',
+        amount: 1000,
+        walletId: 'test_wallet_id',
+        accountReference: 'test_ref',
+        transactionDesc: 'Bitcoin Purchase',
+      });
 
       expect(response.status).toBe(202);
       expect(response.body.success).toBe(true);
@@ -59,13 +57,11 @@ describe('Fiat Integration Tests', () => {
     });
 
     it('should validate phone number format', async () => {
-      const response = await request(app)
-        .post('/api/fiat/mpesa/buy')
-        .send({
-          phoneNumber: 'invalid_phone',
-          amount: 1000,
-          walletId: 'test_wallet_id',
-        });
+      const response = await request(app).post('/api/fiat/mpesa/buy').send({
+        phoneNumber: 'invalid_phone',
+        amount: 1000,
+        walletId: 'test_wallet_id',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -73,13 +69,11 @@ describe('Fiat Integration Tests', () => {
     });
 
     it('should validate amount limits', async () => {
-      const response = await request(app)
-        .post('/api/fiat/mpesa/buy')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 200000, // Exceeds limit
-          walletId: 'test_wallet_id',
-        });
+      const response = await request(app).post('/api/fiat/mpesa/buy').send({
+        phoneNumber: '254712345678',
+        amount: 200000, // Exceeds limit
+        walletId: 'test_wallet_id',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -87,12 +81,10 @@ describe('Fiat Integration Tests', () => {
     });
 
     it('should require wallet ID', async () => {
-      const response = await request(app)
-        .post('/api/fiat/mpesa/buy')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 1000,
-        });
+      const response = await request(app).post('/api/fiat/mpesa/buy').send({
+        phoneNumber: '254712345678',
+        amount: 1000,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -105,15 +97,13 @@ describe('Fiat Integration Tests', () => {
       const mockQueueService = require('../../services/queueService');
       mockQueueService.addMpesaPayoutJob.mockResolvedValue({ id: 'test_job_id' });
 
-      const response = await request(app)
-        .post('/api/fiat/mpesa/payout')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 1000,
-          lightningInvoice: 'lnbc1000n1p...',
-          accountReference: 'test_ref',
-          transactionDesc: 'Bitcoin Payout',
-        });
+      const response = await request(app).post('/api/fiat/mpesa/payout').send({
+        phoneNumber: '254712345678',
+        amount: 1000,
+        lightningInvoice: 'lnbc1000n1p...',
+        accountReference: 'test_ref',
+        transactionDesc: 'Bitcoin Payout',
+      });
 
       expect(response.status).toBe(202);
       expect(response.body.success).toBe(true);
@@ -131,12 +121,10 @@ describe('Fiat Integration Tests', () => {
     });
 
     it('should require lightning invoice', async () => {
-      const response = await request(app)
-        .post('/api/fiat/mpesa/payout')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 1000,
-        });
+      const response = await request(app).post('/api/fiat/mpesa/payout').send({
+        phoneNumber: '254712345678',
+        amount: 1000,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -149,15 +137,13 @@ describe('Fiat Integration Tests', () => {
       const mockQueueService = require('../../services/queueService');
       mockQueueService.addAirtimeJob.mockResolvedValue({ id: 'test_job_id' });
 
-      const response = await request(app)
-        .post('/api/fiat/airtime')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 100,
-          provider: 'safaricom',
-          lightningInvoice: 'lnbc1000n1p...',
-          reference: 'test_ref',
-        });
+      const response = await request(app).post('/api/fiat/airtime').send({
+        phoneNumber: '254712345678',
+        amount: 100,
+        provider: 'safaricom',
+        lightningInvoice: 'lnbc1000n1p...',
+        reference: 'test_ref',
+      });
 
       expect(response.status).toBe(202);
       expect(response.body.success).toBe(true);
@@ -175,14 +161,12 @@ describe('Fiat Integration Tests', () => {
     });
 
     it('should validate provider', async () => {
-      const response = await request(app)
-        .post('/api/fiat/airtime')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 100,
-          provider: 'invalid_provider',
-          lightningInvoice: 'lnbc1000n1p...',
-        });
+      const response = await request(app).post('/api/fiat/airtime').send({
+        phoneNumber: '254712345678',
+        amount: 100,
+        provider: 'invalid_provider',
+        lightningInvoice: 'lnbc1000n1p...',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -190,14 +174,12 @@ describe('Fiat Integration Tests', () => {
     });
 
     it('should validate airtime amount limits', async () => {
-      const response = await request(app)
-        .post('/api/fiat/airtime')
-        .send({
-          phoneNumber: '254712345678',
-          amount: 5, // Below minimum
-          provider: 'safaricom',
-          lightningInvoice: 'lnbc1000n1p...',
-        });
+      const response = await request(app).post('/api/fiat/airtime').send({
+        phoneNumber: '254712345678',
+        amount: 5, // Below minimum
+        provider: 'safaricom',
+        lightningInvoice: 'lnbc1000n1p...',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -218,8 +200,7 @@ describe('Fiat Integration Tests', () => {
         failedReason: null,
       });
 
-      const response = await request(app)
-        .get('/api/fiat/transaction/test_transaction_id');
+      const response = await request(app).get('/api/fiat/transaction/test_transaction_id');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -231,8 +212,7 @@ describe('Fiat Integration Tests', () => {
       const mockQueueService = require('../../services/queueService');
       mockQueueService.getJobStatus.mockResolvedValue(null);
 
-      const response = await request(app)
-        .get('/api/fiat/transaction/non_existent_id');
+      const response = await request(app).get('/api/fiat/transaction/non_existent_id');
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
@@ -242,8 +222,7 @@ describe('Fiat Integration Tests', () => {
 
   describe('GET /api/fiat/airtime/providers', () => {
     it('should return supported airtime providers', async () => {
-      const response = await request(app)
-        .get('/api/fiat/airtime/providers');
+      const response = await request(app).get('/api/fiat/airtime/providers');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -260,8 +239,7 @@ describe('Fiat Integration Tests', () => {
 
   describe('GET /api/fiat/mpesa/limits', () => {
     it('should return MPesa transaction limits', async () => {
-      const response = await request(app)
-        .get('/api/fiat/mpesa/limits');
+      const response = await request(app).get('/api/fiat/mpesa/limits');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -352,14 +330,16 @@ describe('Fiat Integration Tests', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
-        expect(mockAirtimeService.validateCallback).toHaveBeenCalledWith(callback, 'test_signature');
+        expect(mockAirtimeService.validateCallback).toHaveBeenCalledWith(
+          callback,
+          'test_signature'
+        );
       });
     });
 
     describe('GET /webhook/health', () => {
       it('should return webhook health status', async () => {
-        const response = await request(app)
-          .get('/webhook/health');
+        const response = await request(app).get('/webhook/health');
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);

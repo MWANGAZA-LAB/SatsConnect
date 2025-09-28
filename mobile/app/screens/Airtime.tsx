@@ -36,10 +36,10 @@ export default function Airtime() {
   const [selectedProvider, setSelectedProvider] = useState('safaricom');
   const [customAmount, setCustomAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     if (!phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone number is required';
@@ -51,7 +51,10 @@ export default function Airtime() {
       newErrors.amount = 'Please select or enter an amount';
     }
 
-    if (customAmount && (isNaN(Number(customAmount)) || Number(customAmount) <= 0)) {
+    if (
+      customAmount &&
+      (isNaN(Number(customAmount)) || Number(customAmount) <= 0)
+    ) {
       newErrors.customAmount = 'Amount must be a positive number';
     }
 
@@ -66,11 +69,11 @@ export default function Airtime() {
 
     try {
       setIsLoading(true);
-      
-      const amountSats = customAmount 
+
+      const amountSats = customAmount
         ? Math.floor(Number(customAmount) * 100000000) // Convert BTC to sats
         : Math.floor(Number(amount) * 100000000);
-      
+
       const success = await walletService.buyAirtime(
         amountSats,
         phoneNumber,
@@ -107,7 +110,7 @@ export default function Airtime() {
   const formatPhoneNumber = (text: string) => {
     // Remove all non-numeric characters
     const cleaned = text.replace(/\D/g, '');
-    
+
     // Format as Kenyan phone number
     if (cleaned.startsWith('254')) {
       return `+${cleaned}`;
@@ -116,20 +119,20 @@ export default function Airtime() {
     } else if (cleaned.length > 0) {
       return `+254${cleaned}`;
     }
-    
+
     return cleaned;
   };
 
   const formatAmount = (value: string) => {
     // Remove any non-numeric characters except decimal point
     const cleaned = value.replace(/[^0-9.]/g, '');
-    
+
     // Ensure only one decimal point
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       return parts[0] + '.' + parts.slice(1).join('');
     }
-    
+
     return cleaned;
   };
 
@@ -159,11 +162,14 @@ export default function Airtime() {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Buy Airtime</Text>
           <Text style={styles.subtitle}>
@@ -176,7 +182,7 @@ export default function Airtime() {
             label="Phone Number"
             placeholder="+254 700 000 000"
             value={phoneNumber}
-            onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
+            onChangeText={text => setPhoneNumber(formatPhoneNumber(text))}
             keyboardType="phone-pad"
             error={errors.phoneNumber}
           />
@@ -184,12 +190,13 @@ export default function Airtime() {
           <View style={styles.providerSection}>
             <Text style={styles.sectionLabel}>Network Provider</Text>
             <View style={styles.providerGrid}>
-              {AIRTIME_PROVIDERS.map((provider) => (
+              {AIRTIME_PROVIDERS.map(provider => (
                 <TouchableOpacity
                   key={provider.id}
                   style={[
                     styles.providerButton,
-                    selectedProvider === provider.id && styles.providerButtonActive,
+                    selectedProvider === provider.id &&
+                      styles.providerButtonActive,
                   ]}
                   onPress={() => setSelectedProvider(provider.id)}
                 >
@@ -202,7 +209,8 @@ export default function Airtime() {
                   <Text
                     style={[
                       styles.providerText,
-                      selectedProvider === provider.id && styles.providerTextActive,
+                      selectedProvider === provider.id &&
+                        styles.providerTextActive,
                     ]}
                   >
                     {provider.name}
@@ -214,14 +222,15 @@ export default function Airtime() {
 
           <View style={styles.amountSection}>
             <Text style={styles.sectionLabel}>Amount (BTC)</Text>
-            
+
             <View style={styles.amountGrid}>
-              {AIRTIME_AMOUNTS.map((amountValue) => (
+              {AIRTIME_AMOUNTS.map(amountValue => (
                 <TouchableOpacity
                   key={amountValue}
                   style={[
                     styles.amountButton,
-                    amount === amountValue.toString() && styles.amountButtonActive,
+                    amount === amountValue.toString() &&
+                      styles.amountButtonActive,
                   ]}
                   onPress={() => {
                     setAmount(amountValue.toString());
@@ -231,7 +240,8 @@ export default function Airtime() {
                   <Text
                     style={[
                       styles.amountButtonText,
-                      amount === amountValue.toString() && styles.amountButtonTextActive,
+                      amount === amountValue.toString() &&
+                        styles.amountButtonTextActive,
                     ]}
                   >
                     {formatSats(amountValue * 100000000)}
@@ -239,7 +249,8 @@ export default function Airtime() {
                   <Text
                     style={[
                       styles.amountButtonKES,
-                      amount === amountValue.toString() && styles.amountButtonTextActive,
+                      amount === amountValue.toString() &&
+                        styles.amountButtonTextActive,
                     ]}
                   >
                     {formatKES(amountValue * 100000000)}
@@ -252,7 +263,7 @@ export default function Airtime() {
               label="Custom Amount (BTC) - Optional"
               placeholder="0.001"
               value={customAmount}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setCustomAmount(formatAmount(text));
                 setAmount('');
               }}
@@ -266,23 +277,25 @@ export default function Airtime() {
           <Text style={styles.summaryTitle}>Purchase Summary</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Phone Number:</Text>
-            <Text style={styles.summaryValue}>{phoneNumber || 'Not specified'}</Text>
+            <Text style={styles.summaryValue}>
+              {phoneNumber || 'Not specified'}
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Provider:</Text>
             <Text style={styles.summaryValue}>
-              {AIRTIME_PROVIDERS.find(p => p.id === selectedProvider)?.name || 'Not selected'}
+              {AIRTIME_PROVIDERS.find(p => p.id === selectedProvider)?.name ||
+                'Not selected'}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Amount:</Text>
             <Text style={styles.summaryValue}>
-              {customAmount 
+              {customAmount
                 ? `${formatSats(Number(customAmount) * 100000000)} (${formatKES(Number(customAmount) * 100000000)})`
-                : amount 
+                : amount
                   ? `${formatSats(Number(amount) * 100000000)} (${formatKES(Number(amount) * 100000000)})`
-                  : 'Not specified'
-              }
+                  : 'Not specified'}
             </Text>
           </View>
         </Card>
@@ -290,11 +303,11 @@ export default function Airtime() {
         <Card style={styles.infoCard}>
           <Text style={styles.infoTitle}>💡 Airtime Purchase Info</Text>
           <Text style={styles.infoText}>
-            • Airtime is usually credited within 1-2 minutes{'\n'}
-            • You can purchase airtime for any Kenyan mobile number{'\n'}
-            • Minimum purchase amount is 1 sat{'\n'}
-            • Maximum purchase amount is 0.1 BTC per transaction{'\n'}
-            • All transactions are processed via Lightning Network
+            • Airtime is usually credited within 1-2 minutes{'\n'}• You can
+            purchase airtime for any Kenyan mobile number{'\n'}• Minimum
+            purchase amount is 1 sat{'\n'}• Maximum purchase amount is 0.1 BTC
+            per transaction{'\n'}• All transactions are processed via Lightning
+            Network
           </Text>
         </Card>
 
@@ -302,10 +315,12 @@ export default function Airtime() {
           <Button
             title="Buy Airtime"
             onPress={handleBuyAirtime}
-            disabled={!phoneNumber.trim() || (!amount && !customAmount) || isLoading}
+            disabled={
+              !phoneNumber.trim() || (!amount && !customAmount) || isLoading
+            }
             style={styles.buyButton}
           />
-          
+
           <Button
             title="Cancel"
             onPress={() => navigation.goBack()}

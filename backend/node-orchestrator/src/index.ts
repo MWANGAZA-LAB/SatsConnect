@@ -9,7 +9,12 @@ import logger from './utils/logger';
 import grpcClientService from './services/grpcClient';
 
 // Middleware
-import { securityHeaders, createRateLimit, requestLogger, sanitizeError } from './middleware/security';
+import {
+  securityHeaders,
+  createRateLimit,
+  requestLogger,
+  sanitizeError,
+} from './middleware/security';
 import { sanitizeInput } from './middleware/security';
 
 // Routes
@@ -29,10 +34,12 @@ app.use(createRateLimit());
 app.use(compression());
 
 // CORS configuration
-app.use(cors({
-  origin: config.cors.origin,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: config.cors.origin,
+    credentials: true,
+  })
+);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -129,7 +136,7 @@ app.listen(port, () => {
     nodeEnv: config.server.nodeEnv,
     grpcUrl: config.rustEngine.grpcUrl,
   });
-  
+
   console.log(`🚀 SatsConnect Node Orchestrator listening on port ${port}`);
   console.log(`📊 Health check: http://localhost:${port}/health`);
   console.log(`🔗 API docs: http://localhost:${port}/`);

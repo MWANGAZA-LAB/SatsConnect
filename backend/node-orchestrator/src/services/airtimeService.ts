@@ -92,8 +92,9 @@ class AirtimeService {
 
   private async buyAirtimeChimoney(request: AirtimeRequest): Promise<AirtimeResponse> {
     try {
-      const reference = request.reference || `airtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+      const reference =
+        request.reference || `airtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       const payload = {
         subAccount: config.airtime.chimoneySubKey,
         type: 'airtime',
@@ -114,9 +115,9 @@ class AirtimeService {
       });
 
       const response = await this.chimoneyApi.post('/payouts/airtime', payload);
-      
+
       const result = response.data;
-      
+
       if (result.status === 'success') {
         logger.info('Airtime purchase successful via Chimoney:', {
           transactionId: result.id,
@@ -148,8 +149,9 @@ class AirtimeService {
 
   private async buyAirtimeKotanipay(request: AirtimeRequest): Promise<AirtimeResponse> {
     try {
-      const reference = request.reference || `airtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+      const reference =
+        request.reference || `airtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       const payload = {
         phoneNumber: request.phoneNumber,
         amount: request.amount,
@@ -166,9 +168,9 @@ class AirtimeService {
       });
 
       const response = await this.kotanipayApi.post('/airtime/purchase', payload);
-      
+
       const result = response.data;
-      
+
       logger.info('Airtime purchase initiated via KotaniPay:', {
         transactionId: result.transactionId,
         reference,
@@ -196,8 +198,9 @@ class AirtimeService {
 
   private async buyAirtimeBitnob(request: AirtimeRequest): Promise<AirtimeResponse> {
     try {
-      const reference = request.reference || `airtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+      const reference =
+        request.reference || `airtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       const payload = {
         phoneNumber: request.phoneNumber,
         amount: request.amount,
@@ -214,9 +217,9 @@ class AirtimeService {
       });
 
       const response = await this.bitnobApi.post('/airtime/purchase', payload);
-      
+
       const result = response.data;
-      
+
       logger.info('Airtime purchase initiated via Bitnob:', {
         transactionId: result.id,
         reference,
@@ -287,7 +290,7 @@ class AirtimeService {
   async getTransactionStatus(transactionId: string): Promise<AirtimeResponse> {
     try {
       let response;
-      
+
       switch (config.airtime.provider) {
         case 'chimoney':
           response = await this.chimoneyApi.get(`/payouts/${transactionId}`);
@@ -303,7 +306,7 @@ class AirtimeService {
       }
 
       const result = response.data;
-      
+
       return {
         success: result.status === 'success' || result.status === 'completed',
         transactionId: result.id || result.transactionId,

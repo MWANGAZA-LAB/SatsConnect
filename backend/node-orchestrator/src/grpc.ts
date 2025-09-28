@@ -44,7 +44,7 @@ export class WalletClient {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to create wallet'
+        error: error.response?.data?.error || error.message || 'Failed to create wallet',
       };
     }
   }
@@ -58,7 +58,7 @@ export class WalletClient {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to get balance'
+        error: error.response?.data?.error || error.message || 'Failed to get balance',
       };
     }
   }
@@ -73,7 +73,7 @@ export class WalletClient {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to create invoice'
+        error: error.response?.data?.error || error.message || 'Failed to create invoice',
       };
     }
   }
@@ -88,7 +88,7 @@ export class WalletClient {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to send payment'
+        error: error.response?.data?.error || error.message || 'Failed to send payment',
       };
     }
   }
@@ -112,13 +112,19 @@ export class PaymentClient {
     try {
       const response: AxiosResponse<PaymentResponse> = await axios.post(
         `${this.baseUrl}/api/payments/process`,
-        { payment_id: paymentId, wallet_id: walletId, amount_sats: amountSats, invoice, description }
+        {
+          payment_id: paymentId,
+          wallet_id: walletId,
+          amount_sats: amountSats,
+          invoice,
+          description,
+        }
       );
       return response.data;
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to process payment'
+        error: error.response?.data?.error || error.message || 'Failed to process payment',
       };
     }
   }
@@ -132,7 +138,7 @@ export class PaymentClient {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to get payment status'
+        error: error.response?.data?.error || error.message || 'Failed to get payment status',
       };
     }
   }
@@ -147,7 +153,7 @@ export class PaymentClient {
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.data?.error || error.message || 'Failed to process refund'
+        error: error.response?.data?.error || error.message || 'Failed to process refund',
       };
     }
   }
@@ -171,7 +177,7 @@ export function handleHttpError(error: any): { success: boolean; error?: string;
   return {
     success: false,
     error: error.message || 'Unknown HTTP error',
-    code: error.response?.status || 500
+    code: error.response?.status || 500,
   };
 }
 

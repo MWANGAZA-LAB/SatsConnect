@@ -70,7 +70,7 @@ class PaymentService {
 
       clientMethod.call(this, request, (error: any, response: any) => {
         clearTimeout(timeout);
-        
+
         if (error) {
           logger.error(`gRPC call failed: ${method}`, {
             error: error.message,
@@ -89,7 +89,7 @@ class PaymentService {
   public async processPayment(request: ProcessPaymentRequest): Promise<ProcessPaymentResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         payment_id: request.payment_id || '',
         wallet_id: request.wallet_id,
@@ -124,10 +124,12 @@ class PaymentService {
     }
   }
 
-  public async getPaymentStatus(request: GetPaymentStatusRequest): Promise<GetPaymentStatusResponse> {
+  public async getPaymentStatus(
+    request: GetPaymentStatusRequest
+  ): Promise<GetPaymentStatusResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         payment_id: request.payment_id,
       };
@@ -161,7 +163,7 @@ class PaymentService {
   public async refundPayment(request: RefundPaymentRequest): Promise<RefundPaymentResponse> {
     try {
       const clients = grpcClientService.getClients();
-      
+
       const grpcRequest = {
         payment_id: request.payment_id,
         amount_sats: request.amount_sats,

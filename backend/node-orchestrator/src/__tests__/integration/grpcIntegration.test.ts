@@ -37,9 +37,7 @@ describe('gRPC Integration Tests', () => {
     it('should return healthy status when gRPC is available', async () => {
       mockGrpcClientService.checkHealth.mockResolvedValue(true);
 
-      const response = await request(app)
-        .get('/health')
-        .expect(200);
+      const response = await request(app).get('/health').expect(200);
 
       expect(response.body.status).toBe('ok');
       expect(response.body.services.nodeOrchestrator).toBe('healthy');
@@ -49,9 +47,7 @@ describe('gRPC Integration Tests', () => {
     it('should return degraded status when gRPC is unavailable', async () => {
       mockGrpcClientService.checkHealth.mockResolvedValue(false);
 
-      const response = await request(app)
-        .get('/health')
-        .expect(503);
+      const response = await request(app).get('/health').expect(503);
 
       expect(response.body.status).toBe('degraded');
       expect(response.body.services.nodeOrchestrator).toBe('healthy');
@@ -237,16 +233,18 @@ describe('gRPC Integration Tests', () => {
 
     it('should get payment status successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.paymentClient.GetPaymentStatus.mockImplementation((request: any, callback: any) => {
-        callback(null, {
-          payment_id: 'test_payment_123',
-          status: 'COMPLETED',
-          message: 'Payment completed',
-          amount_sats: 1000,
-          payment_hash: 'test_payment_hash_123',
-          timestamp: '2024-01-01T00:00:00Z',
-        });
-      });
+      mockClients.paymentClient.GetPaymentStatus.mockImplementation(
+        (request: any, callback: any) => {
+          callback(null, {
+            payment_id: 'test_payment_123',
+            status: 'COMPLETED',
+            message: 'Payment completed',
+            amount_sats: 1000,
+            payment_hash: 'test_payment_hash_123',
+            timestamp: '2024-01-01T00:00:00Z',
+          });
+        }
+      );
 
       const response = await request(app)
         .get('/api/payments/test_payment_123/status')

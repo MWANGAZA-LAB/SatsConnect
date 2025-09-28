@@ -37,11 +37,11 @@ export class RetryService {
       try {
         logger.debug(`Executing ${operationName}, attempt ${attempt}/${config.maxAttempts}`);
         const result = await operation();
-        
+
         if (attempt > 1) {
           logger.info(`${operationName} succeeded on attempt ${attempt}`);
         }
-        
+
         return result;
       } catch (error) {
         lastError = error as Error;
@@ -62,7 +62,7 @@ export class RetryService {
         // Calculate delay with exponential backoff and jitter
         const delay = this.calculateDelay(attempt, config);
         logger.debug(`Waiting ${delay}ms before retry for ${operationName}`);
-        
+
         await this.sleep(delay);
       }
     }
@@ -73,19 +73,19 @@ export class RetryService {
   private calculateDelay(attempt: number, config: Required<RetryOptions>): number {
     const exponentialDelay = config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1);
     const cappedDelay = Math.min(exponentialDelay, config.maxDelay);
-    
+
     if (config.jitter) {
       // Add random jitter to prevent thundering herd
       const jitterAmount = cappedDelay * 0.1;
       const jitter = (Math.random() - 0.5) * 2 * jitterAmount;
       return Math.max(0, cappedDelay + jitter);
     }
-    
+
     return cappedDelay;
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Circuit breaker pattern
@@ -115,14 +115,14 @@ export class RetryService {
 
       try {
         const result = await operation();
-        
+
         // Reset on success
         if (state === 'HALF_OPEN') {
           state = 'CLOSED';
           failureCount = 0;
           logger.info(`Circuit breaker for ${operationName} moved to CLOSED state`);
         }
-        
+
         return result;
       } catch (error) {
         failureCount++;
@@ -154,7 +154,7 @@ export class RetryService {
     // Process items in batches
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
-      
+
       const batchPromises = batch.map(async (item) => {
         try {
           const result = await this.executeWithRetry(
@@ -170,7 +170,7 @@ export class RetryService {
       });
 
       const batchResults = await Promise.allSettled(batchPromises);
-      
+
       for (const result of batchResults) {
         if (result.status === 'fulfilled' && result.value.success) {
           results.push(result.value.result);
