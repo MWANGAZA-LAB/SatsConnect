@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   AUTH_TOKEN: 'auth_token',
   USER_PREFERENCES: 'user_preferences',
   TRANSACTIONS: 'transactions',
+  PIN_HASH: 'pin_hash',
+  PIN_SALT: 'pin_salt',
 } as const;
 
 export interface WalletData {
@@ -205,12 +207,65 @@ class SecureStorageService {
         this.clearWalletData(),
         this.clearMnemonic(),
         this.clearAuthToken(),
+        this.clearPinData(),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_PREFERENCES),
         AsyncStorage.removeItem(STORAGE_KEYS.TRANSACTIONS),
       ]);
       return true;
     } catch (error) {
       console.error('Failed to clear all data:', error);
+      return false;
+    }
+  }
+
+  // PIN management (sensitive - stored in SecureStore)
+  async savePinHash(pinHash: string): Promise<boolean> {
+    try {
+      await SecureStore.setItemAsync(STORAGE_KEYS.PIN_HASH, pinHash);
+      return true;
+    } catch (error) {
+      console.error('Failed to save PIN hash:', error);
+      return false;
+    }
+  }
+
+  async getStoredPinHash(): Promise<string | null> {
+    try {
+      return await SecureStore.getItemAsync(STORAGE_KEYS.PIN_HASH);
+    } catch (error) {
+      console.error('Failed to get PIN hash:', error);
+      return null;
+    }
+  }
+
+  async savePinSalt(salt: string): Promise<boolean> {
+    try {
+      await SecureStore.setItemAsync(STORAGE_KEYS.PIN_SALT, salt);
+      return true;
+    } catch (error) {
+      console.error('Failed to save PIN salt:', error);
+      return false;
+    }
+  }
+
+  async getPinSalt(): Promise<string | null> {
+    try {
+      return await SecureStore.getItemAsync(STORAGE_KEYS.PIN_SALT);
+    } catch (error) {
+      console.error('Failed to get PIN salt:', error);
+      return null;
+    }
+  }
+
+  async clearPinData(): Promise<boolean> {
+    try {
+      await Promise.all([
+        SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_HASH),
+        SecureStore.deleteItemAsync(STORAGE_KEYS.PIN_SALT),
+      ]);
+      return true;
+    } catch (error) {
+      console.error('Failed to clear PIN data:', error);
       return false;
     }
   }

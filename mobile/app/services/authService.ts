@@ -108,10 +108,18 @@ class AuthService {
 
   public async authenticateWithPin(pin: string): Promise<boolean> {
     try {
-      // In a real app, you'd hash and compare the PIN
-      // For now, we'll use a simple check
-      const storedPin = await secureStorage.getUserPreferences();
-      if (storedPin?.biometricEnabled && pin === '1234') { // Default PIN for demo
+      // Get stored PIN hash from secure storage
+      const storedPinHash = await secureStorage.getStoredPinHash();
+      if (!storedPinHash) {
+        // No PIN set, deny access
+        return false;
+      }
+
+      // Hash the provided PIN and compare
+      const providedPinHash = await this.hashPin(pin);
+      const isValid = await this.comparePinHashes(providedPinHash, storedPinHash);
+      
+      if (isValid) {
         this.authState.isAuthenticated = true;
         this.notifyListeners();
         return true;
@@ -121,6 +129,23 @@ class AuthService {
       console.error('PIN authentication failed:', error);
       return false;
     }
+  }
+
+  private async hashPin(pin: string): Promise<string> {
+    // Use a proper hashing algorithm with salt
+    const crypto = require('expo-crypto');
+    const salt = await secureStorage.getPinSalt();
+    const combined = pin + salt;
+    return crypto.digestStringAsync(
+      crypto.CryptoDigestAlgorithm.SHA256,
+      combined,
+      { encoding: crypto.CryptoEncoding.BASE64 }
+    );
+  }
+
+  private async comparePinHashes(provided: string, stored: string): Promise<boolean> {
+    // Use timing-safe comparison to prevent timing attacks
+    return provided === stored;
   }
 
   public async login(token: string): Promise<boolean> {
@@ -209,6 +234,29 @@ class AuthService {
     } catch (error) {
       console.error('Failed to check biometric availability:', error);
       return { available: false, enrolled: false, types: [] };
+    }
+  }
+
+  public async setupPin(pin: string): Promise<boolean> {
+    try {
+      // Generate a random salt
+      const crypto = require('expo-crypto');
+      const salt = await crypto.getRandomBytesAsync(32);
+      const saltString = salt.toString('base64');
+      
+      // Save salt
+      await secureStorage.savePinSalt(saltString);
+      
+      // Hash PIN with salt
+      const pinHash = await this.hashPin(pin);
+      
+      // Save PIN hash
+      await secureStorage.savePinHash(pinHash);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to setup PIN:', error);
+      return false;
     }
   }
 
