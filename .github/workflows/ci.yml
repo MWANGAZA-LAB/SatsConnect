@@ -54,7 +54,7 @@ jobs:
           ${{ runner.os }}-cargo-
 
     - name: Install cargo-audit
-      run: cargo install cargo-audit
+      run: cargo install cargo-audit --version 0.20.0
 
     - name: Run cargo audit
       run: cargo audit
@@ -164,6 +164,10 @@ jobs:
     - name: Install Expo CLI
       run: npm install -g @expo/cli@${{ env.EXPO_CLI_VERSION }}
 
+    - name: Run npm audit (allow failures for Expo deps)
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+
     - name: Check TypeScript compilation
       run: npx tsc --noEmit
       continue-on-error: false
@@ -234,8 +238,6 @@ jobs:
 
     - name: Run CodeQL Analysis
       uses: github/codeql-action/analyze@v3
-      with:
-        languages: javascript, typescript, rust
 
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
