@@ -37,7 +37,7 @@ export class EncryptionService {
       const key = this.deriveKey(config.jwt.secret, salt);
       
       const cipher = crypto.createCipher(ALGORITHM, key);
-      cipher.setAAD(salt);
+      cipher.setAAD(salt as Uint8Array);
       
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
@@ -97,7 +97,7 @@ export class EncryptionService {
 export const encryptionService = EncryptionService.getInstance();
 
 // Utility functions for sensitive data redaction
-export const redactSensitiveData = (data: any): any => {
+export const redactSensitiveData = (data: unknown): unknown => {
   if (typeof data === 'string') {
     // Redact phone numbers
     if (data.match(/^\d{10,15}$/)) {
@@ -120,7 +120,7 @@ export const redactSensitiveData = (data: any): any => {
   }
 
   if (data && typeof data === 'object') {
-    const redacted: any = {};
+    const redacted: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
       const lowerKey = key.toLowerCase();
       if (lowerKey.includes('password') || 
@@ -151,7 +151,7 @@ export const loadSecureConfig = () => {
     'REDIS_PASSWORD',
   ];
 
-  const secureConfig: any = {};
+  const secureConfig: Record<string, string> = {};
   
   for (const key of sensitiveKeys) {
     const value = process.env[key];
