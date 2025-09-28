@@ -1,0 +1,52 @@
+{
+  "name": "satsconnect",
+  "version": "0.1.0",
+  "description": "SatsConnect - Bitcoin Lightning Network Wallet for Africa",
+  "private": true,
+  "workspaces": [
+    "backend/node-orchestrator",
+    "mobile"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:rust\" \"npm run dev:node\" \"npm run dev:mobile\"",
+    "dev:rust": "cd backend/rust-engine && cargo run --bin engine_server",
+    "dev:node": "cd backend/node-orchestrator && npm run dev",
+    "dev:mobile": "cd mobile && npx expo start",
+    "build": "npm run build:rust && npm run build:node && npm run build:mobile",
+    "build:rust": "cd backend/rust-engine && cargo build --release",
+    "build:node": "cd backend/node-orchestrator && npm run build",
+    "build:mobile": "cd mobile && npx expo export",
+    "test": "npm run test:rust && npm run test:node && npm run test:mobile",
+    "test:rust": "cd backend/rust-engine && cargo test",
+    "test:node": "cd backend/node-orchestrator && npm test",
+    "test:mobile": "cd mobile && npm test",
+    "install:all": "npm install && cd backend/node-orchestrator && npm install && cd ../../mobile && npm install",
+    "start:rust": "cd backend/rust-engine && ./target/release/engine_server.exe",
+    "start:node": "cd backend/node-orchestrator && npm start",
+    "start:mobile": "cd mobile && npx expo start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MWANGAZA-LAB/SatsConnect.git"
+  },
+  "keywords": [
+    "bitcoin",
+    "lightning-network",
+    "wallet",
+    "africa",
+    "mobile",
+    "grpc",
+    "rust",
+    "nodejs",
+    "react-native"
+  ],
+  "author": "MWANGAZA LAB",
+  "license": "MIT"
+}
