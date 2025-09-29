@@ -1,6 +1,14 @@
 import dotenv from 'dotenv';
+import { secureConfigManager } from './secureConfig';
 
+// Load environment variables
 dotenv.config();
+
+// Load secure configuration
+const secureConfig = secureConfigManager.loadSecureConfig();
+
+// Merge secure config with environment variables
+const mergedConfig = { ...process.env, ...secureConfig };
 
 export interface Config {
   server: {
@@ -55,53 +63,59 @@ export interface Config {
 
 const config: Config = {
   server: {
-    port: parseInt(process.env.PORT || '4000', 10),
-    nodeEnv: process.env.NODE_ENV || 'development',
+    port: parseInt(mergedConfig.PORT || '4000', 10),
+    nodeEnv: mergedConfig.NODE_ENV || 'development',
   },
   rustEngine: {
-    grpcUrl: process.env.RUST_ENGINE_GRPC_URL || '127.0.0.1:50051',
-    useTls: process.env.RUST_ENGINE_GRPC_USE_TLS === 'true',
+    grpcUrl: mergedConfig.RUST_ENGINE_GRPC_URL || '127.0.0.1:50051',
+    useTls: mergedConfig.RUST_ENGINE_GRPC_USE_TLS === 'true',
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    secret: mergedConfig.JWT_SECRET || 'default-secret-change-in-production',
+    expiresIn: mergedConfig.JWT_EXPIRES_IN || '24h',
   },
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+    windowMs: parseInt(mergedConfig.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
+    maxRequests: parseInt(mergedConfig.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
   logging: {
-    level: process.env.LOG_LEVEL || 'info',
-    file: process.env.LOG_FILE || 'logs/app.log',
+    level: mergedConfig.LOG_LEVEL || 'info',
+    file: mergedConfig.LOG_FILE || 'logs/app.log',
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: mergedConfig.CORS_ORIGIN || 'http://localhost:3000',
   },
   security: {
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+    bcryptRounds: parseInt(mergedConfig.BCRYPT_ROUNDS || '12', 10),
   },
   mpesa: {
-    consumerKey: process.env.MPESA_CONSUMER_KEY || '',
-    consumerSecret: process.env.MPESA_CONSUMER_SECRET || '',
-    businessShortCode: process.env.MPESA_BUSINESS_SHORT_CODE || '174379',
-    passkey: process.env.MPESA_PASSKEY || '',
-    callbackUrl: process.env.MPESA_CALLBACK_URL || 'https://your-domain.com/webhook/mpesa',
-    environment: (process.env.MPESA_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
+    consumerKey: mergedConfig.MPESA_CONSUMER_KEY || '',
+    consumerSecret: mergedConfig.MPESA_CONSUMER_SECRET || '',
+    businessShortCode: mergedConfig.MPESA_BUSINESS_SHORT_CODE || '174379',
+    passkey: mergedConfig.MPESA_PASSKEY || '',
+    callbackUrl: mergedConfig.MPESA_CALLBACK_URL || 'https://your-domain.com/webhook/mpesa',
+    environment: (mergedConfig.MPESA_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
   },
   airtime: {
-    provider: (process.env.AIRTIME_PROVIDER as 'chimoney' | 'kotanipay' | 'bitnob') || 'chimoney',
-    chimoneyApiKey: process.env.CHIMONEY_API_KEY || '',
-    chimoneySubKey: process.env.CHIMONEY_SUB_KEY || '',
-    webhookUrl: process.env.CHIMONEY_WEBHOOK_URL || 'https://your-domain.com/webhook/airtime',
+    provider: (mergedConfig.AIRTIME_PROVIDER as 'chimoney' | 'kotanipay' | 'bitnob') || 'chimoney',
+    chimoneyApiKey: mergedConfig.CHIMONEY_API_KEY || '',
+    chimoneySubKey: mergedConfig.CHIMONEY_SUB_KEY || '',
+    webhookUrl: mergedConfig.CHIMONEY_WEBHOOK_URL || 'https://your-domain.com/webhook/airtime',
   },
   redis: {
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
-    password: process.env.REDIS_PASSWORD,
+    url: mergedConfig.REDIS_URL || 'redis://localhost:6379',
+    password: mergedConfig.REDIS_PASSWORD,
   },
   queue: {
-    concurrency: parseInt(process.env.QUEUE_CONCURRENCY || '5', 10),
-    retryAttempts: parseInt(process.env.QUEUE_RETRY_ATTEMPTS || '3', 10),
+    concurrency: parseInt(mergedConfig.QUEUE_CONCURRENCY || '5', 10),
+    retryAttempts: parseInt(mergedConfig.QUEUE_RETRY_ATTEMPTS || '3', 10),
   },
 };
+
+// Validate security on startup
+if (process.env.NODE_ENV === 'production') {
+  secureConfigManager.validateSecurity();
+  secureConfigManager.validateNoSeedsStored();
+}
 
 export default config;
