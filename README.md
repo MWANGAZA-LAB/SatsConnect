@@ -1,141 +1,177 @@
-# SatsConnect - Bitcoin Lightning Wallet with MPesa Integration
+# SatsConnect
 
-[![CI/CD Pipeline](https://github.com/MWANGAZA-LAB/SatsConnect/actions/workflows/ci.yml/badge.svg)](https://github.com/MWANGAZA-LAB/SatsConnect/actions/workflows/ci.yml)
-[![Security Audit](https://github.com/MWANGAZA-LAB/SatsConnect/actions/workflows/security.yml/badge.svg)](https://github.com/MWANGAZA-LAB/SatsConnect/actions/workflows/security.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A **non-custodial Bitcoin + Lightning wallet** with **MPesa fiat on/off ramp** for the African market. Built with Rust, Node.js, and React Native.
 
-**SatsConnect** is a non-custodial Bitcoin Lightning wallet with integrated MPesa fiat on/off ramp, designed for the Kenyan market. Users can seamlessly buy Bitcoin with MPesa, send Lightning payments, and convert Bitcoin back to MPesa or airtime.
-
-## 🏗️ Architecture Overview
-
-SatsConnect follows a microservices architecture with three main components:
+## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Mobile App    │    │  Node.js API     │    │  Rust Engine    │
-│  (React Native) │◄──►│  (Orchestrator)  │◄──►│  (Lightning)    │
-│                 │    │                  │    │                 │
-│ • Wallet UI     │    │ • REST API       │    │ • gRPC Server   │
-│ • Biometric Auth│    │ • MPesa Bridge   │    │ • Lightning Node│
-│ • QR Scanner    │    │ • Airtime API    │    │ • Bitcoin Core  │
-│ • Secure Store  │    │ • JWT Auth       │    │ • Multi-peer    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   MPesa API     │    │   Redis Queue    │    │  Lightning      │
-│                 │    │                  │    │  Network        │
-│ • STK Push      │    │ • Job Processing │    │                 │
-│ • Callbacks     │    │ • Rate Limiting  │    │ • Peer Nodes    │
-│ • Payouts       │    │ • Caching        │    │ • Channels      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        SatsConnect Architecture                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  │   Mobile App    │    │  Node.js         │    │  Rust Engine    │
+│  │   (React Native)│◄──►│  Orchestrator    │◄──►│  (gRPC Server)  │
+│  │                 │    │  (REST API)      │    │                 │
+│  │ • Secure Store  │    │ • JWT Auth       │    │ • Wallet Logic  │
+│  │ • Biometric     │    │ • Rate Limiting  │    │ • Lightning     │
+│  │ • QR Scanner    │    │ • Input Validation│   │ • Key Management│
+│  └─────────────────┘    └──────────────────┘    └─────────────────┘
+│           │                       │                       │
+│           │                       │                       │
+│           ▼                       ▼                       ▼
+│  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  │  Secure Storage │    │  Redis/BullMQ    │    │  Lightning      │
+│  │  (Keychain)     │    │  (Queues)        │    │  Network        │
+│  │                 │    │ • MPesa Jobs     │    │ • Bitcoin Core  │
+│  │ • Private Keys  │    │ • Airtime Jobs   │    │ • LND Node      │
+│  │ • Seed Phrases  │    │ • Webhook Jobs   │    │ • Channel Mgmt  │
+│  └─────────────────┘    └──────────────────┘    └─────────────────┘
+│                                │
+│                                ▼
+│                    ┌──────────────────┐
+│                    │  MPesa + Airtime │
+│                    │  (Fiat Bridge)   │
+│                    │                  │
+│                    │ • STK Push       │
+│                    │ • B2C Payouts    │
+│                    │ • Airtime API    │
+│                    │ • Webhooks       │
+│                    └──────────────────┘
+│
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### Data Flow
+
+1. **User Onboarding**: Mobile app generates seed phrase → stored in Keychain
+2. **Wallet Creation**: Mobile app → Node.js → Rust engine → Lightning node
+3. **Buy Bitcoin**: Mobile app → Node.js → MPesa STK Push → Bitcoin received
+4. **Send Bitcoin**: Mobile app → Node.js → Rust engine → Lightning payment
+5. **Sell Bitcoin**: Mobile app → Node.js → MPesa B2C → Mobile money received
 
 ## 🚀 Features
 
-### Core Wallet Features
-- **Non-custodial**: Users control their private keys
-- **Lightning Network**: Fast, low-cost Bitcoin transactions
-- **Multi-peer Support**: Automatic failover for reliability
-- **Biometric Security**: Fingerprint/Face ID authentication
-- **PIN Protection**: Secure PIN with salted hashing
-- **QR Code Support**: Easy payment scanning and generation
+### Core Wallet
+- **Non-custodial**: User controls their private keys
+- **Seed phrase backup**: 12-word mnemonic recovery
+- **Bitcoin Lightning**: Instant, low-fee payments
+- **QR code support**: Easy invoice generation and scanning
+- **Biometric security**: Fingerprint/Face ID app lock
 
 ### Fiat Integration
-- **MPesa Buy Bitcoin**: Convert KES to BTC via STK Push
-- **MPesa Payouts**: Convert BTC to KES via B2C
-- **Airtime Purchase**: Buy airtime with Bitcoin
-- **Bill Payments**: Pay utilities with Bitcoin (coming soon)
+- **MPesa STK Push**: Buy Bitcoin with mobile money
+- **MPesa B2C Payouts**: Convert Bitcoin to mobile money
+- **Airtime purchase**: Buy mobile airtime with Bitcoin
+- **Real-time webhooks**: Instant transaction confirmations
 
-### Security Features
-- **Secure Storage**: Sensitive data encrypted in device keychain
-- **JWT Authentication**: Secure API access tokens
-- **Rate Limiting**: Protection against abuse
-- **Input Validation**: Comprehensive request sanitization
-- **Audit Logging**: Complete transaction and security logs
+### Security
+- **JWT authentication**: Secure API access
+- **Input validation**: All user inputs sanitized
+- **Sensitive data redaction**: No secrets in logs
+- **Rate limiting**: DDoS protection
+- **Secure storage**: Keys stored in device keychain
 
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Rust Engine**: High-performance Lightning node implementation
-- **Node.js Orchestrator**: Express.js REST API with TypeScript
-- **gRPC**: Inter-service communication
-- **Redis**: Job queue and caching
-- **PostgreSQL**: Transaction and user data storage
+- **Rust Engine**: Core Lightning wallet logic (gRPC server)
+- **Node.js Orchestrator**: REST API, authentication, rate limiting
+- **Redis + BullMQ**: Queue management for async operations
+- **Winston**: Structured logging with sensitive data redaction
 
-### Mobile App
-- **React Native**: Cross-platform mobile development
-- **Expo**: Development and deployment platform
-- **TypeScript**: Type-safe JavaScript
-- **Expo SecureStore**: Encrypted local storage
-- **Expo LocalAuthentication**: Biometric authentication
+### Mobile
+- **React Native + Expo**: Cross-platform mobile app
+- **TypeScript**: Type safety across all components
+- **Expo SecureStore**: Secure key storage
+- **Jest**: Comprehensive testing suite
 
 ### Infrastructure
 - **Docker**: Containerized deployment
+- **Nginx**: Reverse proxy and load balancing
+- **Prometheus**: Monitoring and metrics
 - **GitHub Actions**: CI/CD pipeline
-- **Trivy**: Security vulnerability scanning
-- **CodeQL**: Static code analysis
 
 ## 📋 Prerequisites
 
-- **Rust**: 1.81.0 or later
-- **Node.js**: 20.x or later
-- **npm**: 10.x or later
-- **Docker**: 24.x or later
-- **Expo CLI**: Latest version
-- **Redis**: 7.x or later
-- **PostgreSQL**: 15.x or later
+- **Rust** 1.70+ (for Lightning engine)
+- **Node.js** 18+ (for orchestrator)
+- **Redis** 5.0+ (for queues)
+- **Docker** (for containerized deployment)
+- **Expo CLI** (for mobile development)
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
+### 1. Clone Repository
 ```bash
 git clone https://github.com/MWANGAZA-LAB/SatsConnect.git
 cd SatsConnect
 ```
 
-### 2. Environment Setup
+### 2. Install Dependencies
 ```bash
-# Copy environment files
-cp backend/node-orchestrator/.env.example backend/node-orchestrator/.env
-cp mobile/.env.example mobile/.env
+# Install root dependencies
+npm install
 
-# Edit configuration files with your API keys
+# Install backend dependencies
+cd backend/node-orchestrator
+npm install
+
+# Install mobile dependencies
+cd ../../mobile
+npm install
+
+# Install Rust dependencies
+cd ../rust-engine
+cargo build
 ```
 
-### 3. Start Services with Docker
+### 3. Environment Setup
+```bash
+# Copy environment files
+cp backend/node-orchestrator/env.example backend/node-orchestrator/.env
+cp mobile/app.json.example mobile/app.json
+
+# Edit configuration files with your settings
+```
+
+### 4. Start Services
+
+#### Option A: Docker Compose (Recommended)
 ```bash
 # Start all services
 docker-compose up -d
 
-# Check service status
-docker-compose ps
+# View logs
+docker-compose logs -f
 ```
 
-### 4. Manual Development Setup
-
-#### Rust Engine
+#### Option B: Manual Start
 ```bash
+# Terminal 1: Start Rust Engine
 cd backend/rust-engine
-cargo build --release
-cargo test
-./target/release/rust-engine
-```
+cargo run --bin engine_server
 
-#### Node.js Orchestrator
-```bash
+# Terminal 2: Start Node.js Orchestrator
 cd backend/node-orchestrator
-npm install
-npm run build
+npm start
+
+# Terminal 3: Start Mobile App
+cd mobile
 npm start
 ```
 
-#### Mobile App
+### 5. Verify Installation
 ```bash
-cd mobile
-npm install
-npx expo start
+# Check health endpoints
+curl http://localhost:4000/health/health
+curl http://localhost:50051/health
+
+# Test API endpoints
+curl -X POST http://localhost:4000/api/wallet/create \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", "label": "test-wallet"}'
 ```
 
 ## 🔧 Configuration
@@ -143,146 +179,187 @@ npx expo start
 ### Environment Variables
 
 #### Node.js Orchestrator (.env)
-```env
-# Server Configuration
-PORT=4000
+```bash
+# Server
 NODE_ENV=development
-LOG_LEVEL=info
+PORT=4000
+HOST=0.0.0.0
 
-# JWT Configuration
+# JWT
 JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=24h
+JWT_EXPIRES_IN=1h
 
-# Redis Configuration
+# Redis
 REDIS_URL=redis://localhost:6379
-REDIS_PASSWORD=your-redis-password
+REDIS_PASSWORD=
 
-# Database Configuration
-DATABASE_URL=postgresql://user:password@localhost:5432/satsconnect
+# Rust Engine
+RUST_ENGINE_ADDR=http://127.0.0.1:50051
 
-# MPesa Configuration
-MPESA_CONSUMER_KEY=your-mpesa-consumer-key
-MPESA_CONSUMER_SECRET=your-mpesa-consumer-secret
-MPESA_PASSKEY=your-mpesa-passkey
-MPESA_SHORTCODE=your-mpesa-shortcode
-MPESA_CALLBACK_URL=https://your-domain.com/api/webhooks/mpesa
+# MPesa (Safaricom)
+MPESA_CONSUMER_KEY=your-consumer-key
+MPESA_CONSUMER_SECRET=your-consumer-secret
+MPESA_PASSKEY=your-passkey
+MPESA_SHORTCODE=your-shortcode
+MPESA_CALLBACK_URL=https://your-domain.com/webhook/mpesa
 
-# Airtime Configuration
+# Airtime (Chimoney)
 CHIMONEY_API_KEY=your-chimoney-api-key
 CHIMONEY_SUB_KEY=your-chimoney-sub-key
-
-# gRPC Configuration
-GRPC_ENGINE_URL=localhost:50051
 ```
 
-#### Mobile App (.env)
-```env
-EXPO_PUBLIC_API_URL=http://localhost:4000
-EXPO_PUBLIC_APP_NAME=SatsConnect
-EXPO_PUBLIC_APP_VERSION=1.0.0
+#### Mobile App (app.json)
+```json
+{
+  "expo": {
+    "name": "SatsConnect",
+    "slug": "satsconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "com.satsconnect.app"
+    },
+    "android": {
+      "package": "com.satsconnect.app"
+    }
+  }
+}
 ```
-
-## 🔒 Security Considerations
-
-### Data Protection
-- **Private Keys**: Never transmitted, stored only in device keychain
-- **Mnemonic Phrases**: Encrypted with device-specific keys
-- **API Keys**: Stored securely in environment variables
-- **Sensitive Data**: Redacted in logs and error messages
-
-### Authentication & Authorization
-- **JWT Tokens**: Short-lived with secure signing
-- **Biometric Auth**: Device-native security
-- **PIN Protection**: Salted SHA-256 hashing
-- **Rate Limiting**: Per-IP request throttling
-
-### Network Security
-- **HTTPS Only**: All API communications encrypted
-- **Certificate Pinning**: Mobile app validates server certificates
-- **Input Validation**: Comprehensive request sanitization
-- **CORS Configuration**: Restricted to trusted origins
 
 ## 🧪 Testing
 
 ### Run All Tests
 ```bash
 # Backend tests
-cd backend/rust-engine && cargo test
-cd backend/node-orchestrator && npm test
+cd backend/node-orchestrator
+npm test
 
-# Mobile app tests
-cd mobile && npm test
+# Mobile tests
+cd mobile
+npm test
 
-# Integration tests
+# Rust tests
+cd backend/rust-engine
+cargo test
+```
+
+### Test Coverage
+```bash
+# Generate coverage reports
+cd backend/node-orchestrator
+npm run test:coverage
+
+cd mobile
+npm run test:coverage
+```
+
+### End-to-End Testing
+```bash
+# Start test environment
+docker-compose -f docker-compose.test.yml up -d
+
+# Run E2E tests
+cd backend/node-orchestrator
 npm run test:e2e
 ```
 
-### Security Audits
+## 📱 Mobile App Development
+
+### Development Mode
 ```bash
-# Rust security audit
-cd backend/rust-engine && cargo audit
+cd mobile
+npm start
 
-# Node.js security audit
-cd backend/node-orchestrator && npm audit
-
-# Mobile app security audit
-cd mobile && npm audit
+# Scan QR code with Expo Go app
+# Or run on simulator
+npm run ios
+npm run android
 ```
 
-## 📊 API Documentation
+### Building for Production
+```bash
+# Build for iOS
+expo build:ios
 
-### Authentication Endpoints
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `POST /api/auth/refresh` - Refresh JWT token
+# Build for Android
+expo build:android
+```
 
-### Wallet Endpoints
-- `GET /api/wallet/balance` - Get wallet balance
-- `POST /api/wallet/invoice` - Generate Lightning invoice
-- `POST /api/wallet/send` - Send Lightning payment
-- `GET /api/wallet/transactions` - Get transaction history
+## 🔒 Security Considerations
 
-### Fiat Integration Endpoints
-- `POST /api/fiat/mpesa/buy` - Buy Bitcoin with MPesa
-- `POST /api/fiat/mpesa/sell` - Sell Bitcoin for MPesa
-- `POST /api/fiat/airtime/buy` - Buy airtime with Bitcoin
-- `POST /api/fiat/bills/pay` - Pay bills with Bitcoin
+### Production Checklist
+- [ ] Change all default secrets and keys
+- [ ] Enable HTTPS/TLS encryption
+- [ ] Configure proper CORS settings
+- [ ] Set up rate limiting
+- [ ] Enable request logging and monitoring
+- [ ] Use secure key management (AWS KMS, HashiCorp Vault)
+- [ ] Regular security audits and dependency updates
 
-### Webhook Endpoints
-- `POST /api/webhooks/mpesa` - MPesa payment callbacks
-- `POST /api/webhooks/airtime` - Airtime purchase callbacks
+### Key Security Features
+- **Non-custodial**: Users control their private keys
+- **Secure storage**: Keys stored in device keychain
+- **JWT authentication**: Stateless, secure API access
+- **Input validation**: All inputs sanitized and validated
+- **Sensitive data redaction**: No secrets logged
+- **Rate limiting**: DDoS protection
+- **Biometric authentication**: Device-level security
 
 ## 🚀 Deployment
 
-### Production Deployment
+### Docker Deployment
 ```bash
-# Build production images
-docker-compose -f docker-compose.prod.yml build
+# Build images
+docker-compose build
 
 # Deploy to production
 docker-compose -f docker-compose.prod.yml up -d
 
-# Run database migrations
-docker-compose exec node-orchestrator npm run migrate:prod
+# Scale services
+docker-compose up -d --scale node-orchestrator=3
 ```
 
-### Environment-Specific Configuration
-- **Development**: Local development with hot reload
-- **Staging**: Pre-production testing environment
-- **Production**: Live environment with monitoring
+### Manual Deployment
+```bash
+# Build Rust engine
+cd backend/rust-engine
+cargo build --release
 
-## 📈 Monitoring & Logging
+# Build Node.js orchestrator
+cd ../node-orchestrator
+npm run build
+
+# Start services with PM2
+pm2 start ecosystem.config.js
+```
+
+## 📊 Monitoring
 
 ### Health Checks
-- **Rust Engine**: `GET /health` - Engine status and peer connectivity
-- **Node.js API**: `GET /api/health` - API status and dependencies
-- **Mobile App**: Built-in crash reporting and analytics
+- **Node.js Orchestrator**: `GET /health/health`
+- **Rust Engine**: `GET /health` (gRPC)
+- **Redis**: `redis-cli ping`
 
-### Logging
-- **Structured Logging**: JSON format with correlation IDs
-- **Log Levels**: DEBUG, INFO, WARN, ERROR
-- **Security Events**: Authentication failures, suspicious activity
-- **Transaction Logs**: Complete audit trail
+### Metrics
+- **Prometheus**: `http://localhost:9090`
+- **Grafana**: `http://localhost:3000`
+
+### Logs
+```bash
+# View logs
+docker-compose logs -f node-orchestrator
+docker-compose logs -f rust-engine
+
+# Or with PM2
+pm2 logs
+```
 
 ## 🤝 Contributing
 
@@ -296,8 +373,8 @@ docker-compose exec node-orchestrator npm run migrate:prod
 - Follow TypeScript best practices
 - Write comprehensive tests
 - Update documentation
-- Follow security guidelines
-- Use conventional commit messages
+- Follow conventional commit messages
+- Ensure all tests pass before submitting PR
 
 ## 📄 License
 
@@ -308,44 +385,40 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Documentation**: [Wiki](https://github.com/MWANGAZA-LAB/SatsConnect/wiki)
 - **Issues**: [GitHub Issues](https://github.com/MWANGAZA-LAB/SatsConnect/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/MWANGAZA-LAB/SatsConnect/discussions)
-- **Email**: support@satsconnect.africa
 
 ## 🗺️ Roadmap
 
-### Phase 1: Core Wallet (✅ Complete)
-- [x] Rust Lightning Engine
-- [x] Node.js Orchestrator API
-- [x] React Native Mobile App
-- [x] Basic Lightning payments
+### Phase 1: Core MVP ✅
+- [x] Non-custodial Bitcoin wallet
+- [x] Lightning Network integration
+- [x] MPesa fiat on/off ramp
+- [x] Mobile app with secure storage
+- [x] Basic security features
 
-### Phase 2: Fiat Integration (✅ Complete)
-- [x] MPesa STK Push integration
-- [x] MPesa B2C payouts
-- [x] Airtime purchase with Bitcoin
-- [x] Webhook handling
-
-### Phase 3: Enhanced Features (🔄 In Progress)
-- [ ] Bill payment integration
-- [ ] Multi-currency support
-- [ ] Advanced security features
+### Phase 2: Enhanced Features 🚧
+- [ ] Multi-currency support (USD, EUR, NGN)
+- [ ] Advanced Lightning features (channels, routing)
+- [ ] Merchant integration tools
+- [ ] Advanced security (hardware wallet support)
 - [ ] Offline transaction signing
 
-### Phase 4: Scaling (📋 Planned)
-- [ ] Multi-region deployment
+### Phase 3: Scale & Enterprise 📋
+- [ ] Enterprise dashboard
 - [ ] Advanced analytics
-- [ ] Merchant integration
-- [ ] API marketplace
+- [ ] White-label solutions
+- [ ] Regulatory compliance tools
+- [ ] Multi-region deployment
 
 ## 🙏 Acknowledgments
 
-- **Lightning Network**: For enabling fast Bitcoin payments
-- **MPesa**: For providing fiat on/off ramp
-- **Expo**: For mobile development platform
-- **Rust Community**: For excellent tooling and ecosystem
-- **Node.js Community**: For robust backend infrastructure
+- **Lightning Network**: For instant, low-fee Bitcoin payments
+- **Rust Community**: For the excellent ecosystem and performance
+- **React Native**: For cross-platform mobile development
+- **Expo**: For the amazing development experience
+- **MPesa**: For enabling mobile money integration in Africa
 
 ---
 
 **Built with ❤️ for the African Bitcoin community**
 
-*SatsConnect - Bringing Bitcoin to Africa, one sat at a time*
+*SatsConnect - Bringing Bitcoin to Africa, one transaction at a time.*

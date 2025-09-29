@@ -5,6 +5,40 @@ import { checkEngineHealth } from '../../grpc';
 import walletRoutes from '../../routes/walletRoutes';
 import paymentRoutes from '../../routes/paymentRoutes';
 import { testUtils } from '../setup';
+import { generateToken } from '../../middleware/auth';
+
+// Mock dependencies
+jest.mock('../../services/queueService', () => ({
+  addMpesaBuyJob: jest.fn().mockResolvedValue({ id: 'test_job_id' }),
+  addMpesaPayoutJob: jest.fn().mockResolvedValue({ id: 'test_job_id' }),
+  addAirtimeJob: jest.fn().mockResolvedValue({ id: 'test_job_id' }),
+  getJobStatus: jest.fn().mockResolvedValue({
+    id: 'test_job_id',
+    name: 'mpesa-buy',
+    data: { transactionId: 'test_transaction_id' },
+    state: 'completed',
+  }),
+}));
+
+jest.mock('../../services/mpesaService', () => ({
+  stkPush: jest.fn().mockResolvedValue({
+    success: true,
+    checkoutRequestId: 'ws_CO_123456789',
+    merchantRequestId: 'merchant_req_123',
+  }),
+  validateCallback: jest.fn().mockReturnValue(true),
+  extractTransactionDetails: jest.fn().mockReturnValue({
+    merchantRequestID: 'test_merchant_id',
+    checkoutRequestID: 'test_checkout_id',
+    resultCode: 0,
+    resultDesc: 'Success',
+  }),
+}));
+
+jest.mock('../../services/airtimeService', () => ({
+  validateCallback: jest.fn().mockReturnValue(true),
+  processCallback: jest.fn().mockResolvedValue({ success: true }),
+}));
 
 // Create test Express app
 const createTestApp = () => {
@@ -73,11 +107,19 @@ const createTestApp = () => {
 
 describe('REST API Integration Tests', () => {
   let app: express.Application;
+  let authToken: string;
 
   beforeAll(async () => {
     // Wait for engine to be ready
     await testUtils.waitForEngine();
     app = createTestApp();
+    
+    // Generate auth token for tests
+    authToken = generateToken({ 
+      id: 'test-user', 
+      role: 'user',
+      permissions: ['wallet:read', 'wallet:write', 'payment:read', 'payment:write']
+    });
   });
 
   describe('Health Check', () => {
@@ -107,6 +149,7 @@ describe('REST API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/wallet/create')
+        .set('Authorization', `Bearer ${authToken}`)
         .send(testData.wallet)
         .expect(201);
 
@@ -122,7 +165,10 @@ describe('REST API Integration Tests', () => {
     });
 
     test('GET /api/wallet/balance should return balance', async () => {
-      const response = await request(app).get('/api/wallet/balance').expect(200);
+      const response = await request(app)
+        .get('/api/wallet/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
 
       expect(response.body).toHaveProperty('success');
       expect(response.body.success).toBe(true);
@@ -140,6 +186,7 @@ describe('REST API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/wallet/invoice')
+        .set('Authorization', `Bearer ${authToken}`)
         .send(testData.invoice)
         .expect(201);
 
@@ -315,7 +362,9 @@ describe('REST API Integration Tests', () => {
 
   describe('Performance Tests', () => {
     test('should handle concurrent requests', async () => {
-      const promises = Array.from({ length: 10 }, () => request(app).get('/api/wallet/balance'));
+      const promises = Array.from({ length: 10 }, () => 
+        request(app).get('/api/wallet/balance').set('Authorization', `Bearer ${authToken}`)
+      );
 
       const responses = await Promise.all(promises);
 
@@ -328,7 +377,10 @@ describe('REST API Integration Tests', () => {
 
     test('should handle rapid sequential requests', async () => {
       for (let i = 0; i < 5; i++) {
-        const response = await request(app).get('/api/wallet/balance').expect(200);
+        const response = await request(app)
+          .get('/api/wallet/balance')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200);
 
         expect(response.body).toHaveProperty('success');
         expect(typeof response.body.success).toBe('boolean');
@@ -348,7 +400,10 @@ describe('REST API Integration Tests', () => {
     });
 
     test('should return JSON content type', async () => {
-      const response = await request(app).get('/api/wallet/balance').expect(200);
+      const response = await request(app)
+        .get('/api/wallet/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });

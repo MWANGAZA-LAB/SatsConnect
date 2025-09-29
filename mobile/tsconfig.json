@@ -1,5 +1,5 @@
 {
-    "compilerOptions": {
+  "compilerOptions": {
     "target": "ES2020",
     "module": "Node16",
     "jsx": "react-jsx",
@@ -7,10 +7,28 @@
     "moduleResolution": "node16",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@types"],
+    "noImplicitAny": false,
+    "types": []
   },
   "include": [
-    "app",
+    "app/**/*.ts",
+    "app/**/*.tsx",
     "index.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "app/**/__tests__/**",
+    "app/**/*.test.ts",
+    "app/**/*.test.tsx",
+    "jest.setup.js",
+    "jest.config.js"
   ]
 }
