@@ -1,4 +1,5 @@
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as Crypto from 'expo-crypto';
 import { secureStorage } from './secureStorage';
 import { apiService } from './api';
 
@@ -137,13 +138,12 @@ class AuthService {
 
   private async hashPin(pin: string): Promise<string> {
     // Use a proper hashing algorithm with salt
-    const crypto = require('expo-crypto');
     const salt = await secureStorage.getPinSalt();
     const combined = pin + salt;
-    return crypto.digestStringAsync(
-      crypto.CryptoDigestAlgorithm.SHA256,
+    return Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
       combined,
-      { encoding: crypto.CryptoEncoding.BASE64 }
+      { encoding: Crypto.CryptoEncoding.BASE64 }
     );
   }
 
@@ -248,8 +248,7 @@ class AuthService {
   public async setupPin(pin: string): Promise<boolean> {
     try {
       // Generate a random salt
-      const crypto = require('expo-crypto');
-      const salt = await crypto.getRandomBytesAsync(32);
+      const salt = await Crypto.getRandomBytesAsync(32);
       const saltString = salt.toString('base64');
 
       // Save salt
