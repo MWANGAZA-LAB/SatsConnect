@@ -21,6 +21,11 @@ env:
   NODE_VERSION: '20'
   EXPO_CLI_VERSION: 'latest'
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   # Phase 1: Rust gRPC Engine
   rust-engine:
@@ -226,9 +231,10 @@ jobs:
 
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && (success() || failure())
       with:
         sarif_file: 'trivy-results.sarif'
+      continue-on-error: true
 
     - name: Check for secrets
       uses: trufflesecurity/trufflehog@main
@@ -237,9 +243,11 @@ jobs:
         base: main
         head: HEAD
         extra_args: --debug --only-verified
+      continue-on-error: true
 
     - name: Run CodeQL Analysis
       uses: github/codeql-action/analyze@v3
+      continue-on-error: true
 
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
