@@ -4,9 +4,9 @@ import fiatRoutes from '../../routes/fiatRoutes';
 
 // Mock authentication middleware
 jest.mock('../../middleware/auth', () => ({
-  authenticateToken: (req: any, res: any, next: any) => {
-    req.user = { id: 'test_user_id' };
-    next();
+  authenticateToken: (req: unknown, res: unknown, next: unknown) => {
+    (req as { user: { id: string } }).user = { id: 'test_user_id' };
+    (next as () => void)();
   },
 }));
 

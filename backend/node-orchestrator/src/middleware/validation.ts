@@ -33,7 +33,7 @@ const sanitizeAmount = (amount: string | number): number => {
 const sanitizeString = (str: string): string => {
   return str
     .trim()
-    .replace(/[<>\"'&]/g, '') // Remove potentially dangerous characters
+    .replace(/[<>"'&]/g, '') // Remove potentially dangerous characters
     .substring(0, 1000); // Limit length
 };
 

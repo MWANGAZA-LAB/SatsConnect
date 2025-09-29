@@ -72,13 +72,13 @@ describe('gRPC Integration Tests', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
     });
 
     it('should create wallet successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.walletClient.CreateWallet.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.walletClient.CreateWallet.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { node_id: string; address: string }) => void)(null, {
           node_id: 'test_node_id_123',
           address: 'tb1qtest123456789',
         });
@@ -99,8 +99,8 @@ describe('gRPC Integration Tests', () => {
 
     it('should get balance successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.walletClient.GetBalance.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.walletClient.GetBalance.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { confirmed_sats: number; lightning_sats: number }) => void)(null, {
           confirmed_sats: 1000000,
           lightning_sats: 500000,
         });
@@ -118,8 +118,8 @@ describe('gRPC Integration Tests', () => {
 
     it('should create invoice successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.walletClient.NewInvoice.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.walletClient.NewInvoice.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { invoice: string; payment_hash: string }) => void)(null, {
           invoice: 'lnbc1000u1p3k2v5cpp5test',
           payment_hash: 'test_payment_hash_123',
         });
@@ -141,8 +141,8 @@ describe('gRPC Integration Tests', () => {
 
     it('should send payment successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.walletClient.SendPayment.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.walletClient.SendPayment.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { payment_hash: string; status: string }) => void)(null, {
           payment_hash: 'sent_payment_hash_123',
           status: 'SUCCEEDED',
         });
@@ -163,8 +163,8 @@ describe('gRPC Integration Tests', () => {
 
     it('should buy airtime successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.walletClient.BuyAirtime.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.walletClient.BuyAirtime.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { invoice: string; payment_hash: string; status: string }) => void)(null, {
           invoice: 'lnbc500u1p3k2v5cpp5airtime',
           payment_hash: 'airtime_payment_hash_123',
           status: 'PENDING',
@@ -198,13 +198,13 @@ describe('gRPC Integration Tests', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
     });
 
     it('should process payment successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.paymentClient.ProcessPayment.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.paymentClient.ProcessPayment.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
           payment_id: 'test_payment_123',
           status: 'PENDING',
           message: 'Payment processed',
@@ -234,8 +234,8 @@ describe('gRPC Integration Tests', () => {
     it('should get payment status successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
       mockClients.paymentClient.GetPaymentStatus.mockImplementation(
-        (request: any, callback: any) => {
-          callback(null, {
+        (request: unknown, callback: unknown) => {
+          (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
             payment_id: 'test_payment_123',
             status: 'COMPLETED',
             message: 'Payment completed',
@@ -257,8 +257,8 @@ describe('gRPC Integration Tests', () => {
 
     it('should refund payment successfully', async () => {
       const mockClients = mockGrpcClientService.getClients();
-      mockClients.paymentClient.ProcessRefund.mockImplementation((request: any, callback: any) => {
-        callback(null, {
+      mockClients.paymentClient.ProcessRefund.mockImplementation((request: unknown, callback: unknown) => {
+        (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
           payment_id: 'test_payment_123',
           status: 'REFUNDED',
           message: 'Payment refunded',

@@ -1,7 +1,7 @@
 // Mock gRPC clients for testing when Rust engine is not available
 
 export const mockWalletClient = {
-  createWallet: (request: any, callback: (error: any, response: any) => void) => {
+  createWallet: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (request.mnemonic && request.mnemonic.split(' ').length < 12) {
         callback({ code: 3, message: 'Invalid mnemonic' }, null);
@@ -14,7 +14,7 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  getBalance: (request: any, callback: (error: any, response: any) => void) => {
+  getBalance: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         confirmedSats: '1000000',
@@ -23,7 +23,7 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  newInvoice: (request: any, callback: (error: any, response: any) => void) => {
+  newInvoice: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (request.amountSats < 0) {
         callback({ code: 3, message: 'Invalid amount' }, null);
@@ -37,7 +37,7 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  sendPayment: (request: any, callback: (error: any, response: any) => void) => {
+  sendPayment: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (!request.invoice || request.invoice.length < 10) {
         callback({ code: 3, message: 'Invalid invoice' }, null);
@@ -50,7 +50,7 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  buyAirtime: (request: any, callback: (error: any, response: any) => void) => {
+  buyAirtime: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         invoice: 'lnbc' + request.amountSats + 'u1p3k2v5cpp5' + Math.random().toString(36),
@@ -64,7 +64,7 @@ export const mockWalletClient = {
 };
 
 export const mockPaymentClient = {
-  processPayment: (request: any, callback: (error: any, response: any) => void) => {
+  processPayment: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (!request.paymentId || request.paymentId.length === 0) {
         callback({ code: 3, message: 'Invalid payment ID' }, null);
@@ -80,7 +80,7 @@ export const mockPaymentClient = {
     }, 100);
   },
 
-  getPaymentStatus: (request: any, callback: (error: any, response: any) => void) => {
+  getPaymentStatus: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         paymentId: request.paymentId,
@@ -93,7 +93,7 @@ export const mockPaymentClient = {
     }, 100);
   },
 
-  processRefund: (request: any, callback: (error: any, response: any) => void) => {
+  processRefund: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         paymentId: request.paymentId,
@@ -104,10 +104,10 @@ export const mockPaymentClient = {
     }, 100);
   },
 
-  streamPayments: (request: any) => {
+  streamPayments: (request: unknown) => {
     // Mock stream - returns a simple object with mock data
     return {
-      on: (event: string, handler: (data: any) => void) => {
+      on: (event: string, handler: (data: unknown) => void) => {
         if (event === 'data') {
           setTimeout(() => {
             handler({
@@ -147,7 +147,7 @@ export function createMockPaymentClient() {
   return mockPaymentClient;
 }
 
-export function handleMockGrpcError(error: any): {
+export function handleMockGrpcError(error: unknown): {
   success: boolean;
   error?: string;
   code?: number;

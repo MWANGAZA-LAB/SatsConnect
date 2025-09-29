@@ -27,8 +27,8 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          ProcessPayment: jest.fn((request: any, callback: any) => {
-            callback(null, {
+          ProcessPayment: jest.fn((request: unknown, callback: unknown) => {
+            (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
               payment_id: 'test_payment_123',
               status: 'PENDING',
               message: 'Payment processed',
@@ -40,7 +40,7 @@ describe('PaymentService', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.processPayment({
         payment_id: 'test_payment_123',
@@ -65,8 +65,8 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          ProcessPayment: jest.fn((request: any, callback: any) => {
-            callback(null, {
+          ProcessPayment: jest.fn((request: unknown, callback: unknown) => {
+            (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
               payment_id: 'generated_payment_456',
               status: 'PENDING',
               message: 'Payment processed',
@@ -78,7 +78,7 @@ describe('PaymentService', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.processPayment({
         wallet_id: 'test_wallet_123',
@@ -95,13 +95,13 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          ProcessPayment: jest.fn((request: any, callback: any) => {
-            callback(new Error('Invalid invoice format'), null);
+          ProcessPayment: jest.fn((request: unknown, callback: unknown) => {
+            (callback as (error: Error, response: null) => void)(new Error('Invalid invoice format'), null);
           }),
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.processPayment({
         wallet_id: 'test_wallet_123',
@@ -120,8 +120,8 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          GetPaymentStatus: jest.fn((request: any, callback: any) => {
-            callback(null, {
+          GetPaymentStatus: jest.fn((request: unknown, callback: unknown) => {
+            (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
               payment_id: 'test_payment_123',
               status: 'COMPLETED',
               message: 'Payment completed',
@@ -133,7 +133,7 @@ describe('PaymentService', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.getPaymentStatus({
         payment_id: 'test_payment_123',
@@ -154,13 +154,13 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          GetPaymentStatus: jest.fn((request: any, callback: any) => {
+          GetPaymentStatus: jest.fn((request: unknown, callback: unknown) => {
             callback(new Error('Payment not found'), null);
           }),
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.getPaymentStatus({
         payment_id: 'nonexistent_payment',
@@ -176,8 +176,8 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          ProcessRefund: jest.fn((request: any, callback: any) => {
-            callback(null, {
+          ProcessRefund: jest.fn((request: unknown, callback: unknown) => {
+            (callback as (error: null, response: { payment_id: string; status: string; message: string; amount_sats: number; payment_hash: string; timestamp: string }) => void)(null, {
               payment_id: 'test_payment_123',
               status: 'REFUNDED',
               message: 'Payment refunded',
@@ -189,7 +189,7 @@ describe('PaymentService', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.refundPayment({
         payment_id: 'test_payment_123',
@@ -211,13 +211,13 @@ describe('PaymentService', () => {
       const mockClients = {
         walletClient: {},
         paymentClient: {
-          ProcessRefund: jest.fn((request: any, callback: any) => {
+          ProcessRefund: jest.fn((request: unknown, callback: unknown) => {
             callback(new Error('Payment cannot be refunded'), null);
           }),
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as any);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
 
       const result = await paymentService.refundPayment({
         payment_id: 'test_payment_123',
