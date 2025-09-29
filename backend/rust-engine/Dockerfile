@@ -23,8 +23,8 @@ COPY proto/ ./proto/
 COPY src/ ./src/
 COPY build.rs ./
 
-# Build the application
-RUN cargo build --release
+# Build only the main application (not test clients)
+RUN cargo build --release --bin engine_server
 
 # Runtime stage
 FROM debian:bookworm-slim
