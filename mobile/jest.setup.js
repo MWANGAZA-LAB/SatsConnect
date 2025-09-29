@@ -1,3 +1,6 @@
+// Set up global variables
+global.__DEV__ = true;
+
 // Mock expo modules
 jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(() => Promise.resolve()),
@@ -10,6 +13,17 @@ jest.mock('expo-local-authentication', () => ({
   isEnrolledAsync: jest.fn(() => Promise.resolve(true)),
   authenticateAsync: jest.fn(() => Promise.resolve({ success: true })),
   supportedAuthenticationTypesAsync: jest.fn(() => Promise.resolve([1, 2, 3])),
+}));
+
+jest.mock('expo-crypto', () => ({
+  digestStringAsync: jest.fn(() => Promise.resolve('hashed_string')),
+  getRandomBytesAsync: jest.fn(() => Promise.resolve(new Uint8Array(32))),
+  CryptoDigestAlgorithm: {
+    SHA256: 'SHA256',
+  },
+  CryptoEncoding: {
+    BASE64: 'base64',
+  },
 }));
 
 jest.mock('expo-camera', () => ({
