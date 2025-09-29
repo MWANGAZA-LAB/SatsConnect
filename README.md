@@ -94,8 +94,8 @@ A **non-custodial Bitcoin + Lightning wallet** with **MPesa fiat on/off ramp** f
 
 ## 📋 Prerequisites
 
-- **Rust** 1.70+ (for Lightning engine)
-- **Node.js** 18+ (for orchestrator)
+- **Rust** 1.82+ (for Lightning engine)
+- **Node.js** 20+ (for orchestrator)
 - **Redis** 5.0+ (for queues)
 - **Docker** (for containerized deployment)
 - **Expo CLI** (for mobile development)
