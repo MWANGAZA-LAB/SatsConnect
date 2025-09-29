@@ -43,7 +43,7 @@ class AuthService {
         biometricEnrolled &&
         preferences?.biometricEnabled === true;
 
-      // If no wallet, user needs to go through onboarding
+      // If no wallet, user needs to go through setup
       if (!hasWallet) {
         this.authState.isAuthenticated = false;
       } else {
@@ -249,7 +249,7 @@ class AuthService {
     try {
       // Generate a random salt
       const salt = await Crypto.getRandomBytesAsync(32);
-      const saltString = salt.toString('base64');
+      const saltString = btoa(String.fromCharCode(...salt));
 
       // Save salt
       await secureStorage.savePinSalt(saltString);
