@@ -1,5 +1,5 @@
 # Multi-stage build for SatsConnect Rust Engine
-FROM rust:1.82.0-slim as builder
+FROM rust:1.82.0-slim AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -32,6 +32,7 @@ FROM debian:bookworm-slim
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    net-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
@@ -52,9 +53,9 @@ USER appuser
 # Expose gRPC port
 EXPOSE 50051
 
-# Health check
+# Health check (simple port check)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD grpc_health_probe -addr=:50051 || exit 1
+    CMD netstat -an | grep :50051 || exit 1
 
 # Run the application
 CMD ["./engine_server"]

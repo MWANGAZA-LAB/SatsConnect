@@ -102,7 +102,6 @@ ehthumbs.db
 Thumbs.db
 
 # Rust specific
-Cargo.lock
 target/
 
 # Expo
