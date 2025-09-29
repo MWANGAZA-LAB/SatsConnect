@@ -1,10 +1,10 @@
+use crate::secure_storage::SecureStorage;
+use anyhow::Result;
+use bip39::{Language, Mnemonic};
+use directories::ProjectDirs;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use bip39::{Mnemonic, Language};
-use anyhow::Result;
-use directories::ProjectDirs;
-use crate::secure_storage::SecureStorage;
 
 // Simplified wallet types for HTTP API (will be replaced with gRPC later)
 #[derive(Debug, Clone)]
@@ -28,9 +28,9 @@ impl WalletHandler {
             .ok_or_else(|| anyhow::anyhow!("Failed to get project directories"))?;
         let data_dir = dirs.data_dir().to_path_buf();
         std::fs::create_dir_all(&data_dir)?;
-        
+
         let secure_storage = Arc::new(SecureStorage::new(data_dir)?);
-        
+
         Ok(Self {
             wallets: Arc::new(RwLock::new(HashMap::new())),
             current_wallet: Arc::new(RwLock::new(None)),
@@ -44,21 +44,25 @@ impl WalletHandler {
     }
 
     fn generate_node_id(mnemonic: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(mnemonic.as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
     fn generate_address(mnemonic: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(mnemonic.as_bytes());
         let hash = hasher.finalize();
         format!("tb1q{}", hex::encode(&hash[..20]))
     }
 
-    pub async fn create_wallet(&self, label: String, mnemonic: Option<String>) -> Result<(String, String)> {
+    pub async fn create_wallet(
+        &self,
+        label: String,
+        mnemonic: Option<String>,
+    ) -> Result<(String, String)> {
         let mnemonic = if let Some(m) = mnemonic {
             if m.is_empty() {
                 Self::generate_mnemonic()?
@@ -99,10 +103,12 @@ impl WalletHandler {
         let current_wallet = self.current_wallet.read().await;
         let wallets = self.wallets.read().await;
 
-        let wallet_name = current_wallet.as_ref()
+        let wallet_name = current_wallet
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("No wallet loaded"))?;
 
-        let _wallet = wallets.get(wallet_name)
+        let _wallet = wallets
+            .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
         // Mock balances - return some test values
@@ -111,18 +117,24 @@ impl WalletHandler {
         Ok((onchain, ln))
     }
 
-    pub async fn generate_invoice(&self, amount_sats: u64, memo: String) -> Result<(String, String)> {
+    pub async fn generate_invoice(
+        &self,
+        amount_sats: u64,
+        memo: String,
+    ) -> Result<(String, String)> {
         let current_wallet = self.current_wallet.read().await;
         let wallets = self.wallets.read().await;
 
-        let wallet_name = current_wallet.as_ref()
+        let wallet_name = current_wallet
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("No wallet loaded"))?;
 
-        let _wallet = wallets.get(wallet_name)
+        let _wallet = wallets
+            .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
         // Mock Lightning invoice generation
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(format!("{}{}", amount_sats, memo).as_bytes());
         let payment_hash = format!("{:x}", hasher.finalize());
@@ -134,18 +146,20 @@ impl WalletHandler {
         let current_wallet = self.current_wallet.read().await;
         let wallets = self.wallets.read().await;
 
-        let wallet_name = current_wallet.as_ref()
+        let wallet_name = current_wallet
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("No wallet loaded"))?;
 
-        let _wallet = wallets.get(wallet_name)
+        let _wallet = wallets
+            .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
         // Mock payment processing
         if !invoice.starts_with("lnbc") {
             return Err(anyhow::anyhow!("Invalid Lightning invoice format"));
         }
-        
-        use sha2::{Sha256, Digest};
+
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(invoice.as_bytes());
         let payment_hash = format!("{:x}", hasher.finalize());
@@ -153,20 +167,31 @@ impl WalletHandler {
         Ok((payment_hash, status))
     }
 
-    pub async fn buy_airtime(&self, amount_sats: u64, phone_number: String, provider: Option<String>) -> Result<(String, String, String)> {
+    pub async fn buy_airtime(
+        &self,
+        amount_sats: u64,
+        phone_number: String,
+        provider: Option<String>,
+    ) -> Result<(String, String, String)> {
         let current_wallet = self.current_wallet.read().await;
         let wallets = self.wallets.read().await;
 
-        let wallet_name = current_wallet.as_ref()
+        let wallet_name = current_wallet
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("No wallet loaded"))?;
 
-        let _wallet = wallets.get(wallet_name)
+        let _wallet = wallets
+            .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
         // Mock airtime purchase - create an invoice for airtime
-        let memo = format!("Airtime for {} via {}", phone_number, provider.unwrap_or_else(|| "default".to_string()));
+        let memo = format!(
+            "Airtime for {} via {}",
+            phone_number,
+            provider.unwrap_or_else(|| "default".to_string())
+        );
         let (invoice, payment_hash) = self.generate_invoice(amount_sats, memo).await?;
-        
+
         Ok((invoice, payment_hash, "PENDING".to_string()))
     }
 }

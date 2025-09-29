@@ -19,4 +19,5 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(jest-)?react-native|@react-native|@react-navigation|expo|@expo)',
   ],
+  testEnvironment: 'node',
 };

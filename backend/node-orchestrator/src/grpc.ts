@@ -186,27 +186,27 @@ export async function checkEngineHealth(address = RUST_ENGINE_BASE_URL): Promise
   try {
     // Simple TCP connection test to check if the gRPC server is listening
     const net = require('net');
-    
+
     return new Promise((resolve) => {
       const socket = new net.Socket();
       const timeout = 5000;
-      
+
       socket.setTimeout(timeout);
-      
+
       socket.on('connect', () => {
         socket.destroy();
         resolve(true);
       });
-      
+
       socket.on('timeout', () => {
         socket.destroy();
         resolve(false);
       });
-      
+
       socket.on('error', () => {
         resolve(false);
       });
-      
+
       // Extract host and port from address
       const [host, port] = address.replace('http://', '').split(':');
       socket.connect(parseInt(port) || 50051, host || '127.0.0.1');

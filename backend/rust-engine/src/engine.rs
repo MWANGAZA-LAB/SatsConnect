@@ -2,10 +2,14 @@ use anyhow::Result;
 use bip39::{Language, Mnemonic};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
-use std::{fs, path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
-use tokio::sync::{Mutex, RwLock};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::{
+    fs,
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::{Mutex, RwLock};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WalletState {
@@ -49,11 +53,11 @@ impl LightningEngine {
         fs::create_dir_all(&data_dir)?;
         let state_file = data_dir.join("state.json");
 
-        let mnemonic = if let Some(m) = maybe_mnemonic { 
+        let mnemonic = if let Some(m) = maybe_mnemonic {
             // Validate the provided mnemonic
             Mnemonic::parse(&m)?;
-            m 
-        } else { 
+            m
+        } else {
             let m = Mnemonic::generate_in(Language::English, 12)?;
             m.to_string()
         };
@@ -64,19 +68,19 @@ impl LightningEngine {
         let node_id_hex = format!("{:x}", hasher.finalize());
 
         let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        let state = WalletState { 
-            node_id_hex: node_id_hex.clone(), 
+        let state = WalletState {
+            node_id_hex: node_id_hex.clone(),
             label: label.clone(),
             last_updated: now,
         };
-        
+
         let health = HealthStatus {
             is_healthy: true,
             last_check: now,
             error_count: 0,
             last_error: None,
         };
-        
+
         let engine = Self {
             state_file,
             state: Mutex::new(state),
@@ -85,7 +89,7 @@ impl LightningEngine {
             health: RwLock::new(health),
             primary_peer: RwLock::new(None),
         };
-        
+
         engine.persist_state().await?;
         Ok(engine)
     }
@@ -97,7 +101,11 @@ impl LightningEngine {
         Ok(())
     }
 
-    pub async fn generate_invoice(&self, amount_sats: u64, memo: Option<String>) -> Result<(String, String)> {
+    pub async fn generate_invoice(
+        &self,
+        amount_sats: u64,
+        memo: Option<String>,
+    ) -> Result<(String, String)> {
         // Mock Lightning invoice generation
         let mut hasher = Sha256::new();
         hasher.update(format!("{}{}", amount_sats, memo.unwrap_or_default()).as_bytes());
@@ -111,7 +119,7 @@ impl LightningEngine {
         if !invoice.starts_with("lnbc") {
             return Err(anyhow::anyhow!("Invalid Lightning invoice format"));
         }
-        
+
         let mut hasher = Sha256::new();
         hasher.update(invoice.as_bytes());
         let payment_hash = format!("{:x}", hasher.finalize());
@@ -146,7 +154,7 @@ impl LightningEngine {
             connection_attempts: 0,
             success_rate: 1.0,
         };
-        
+
         let mut peers = self.peers.write().await;
         peers.insert(node_id, peer);
         Ok(())
@@ -176,56 +184,56 @@ impl LightningEngine {
 
     // Health monitoring methods
     pub async fn check_health(&self) -> HealthStatus {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
         let mut health = self.health.write().await;
         health.last_check = now;
-        
+
         // Check if we have any online peers
         let peers = self.peers.read().await;
         let has_online_peers = peers.values().any(|peer| peer.is_online);
-        
+
         health.is_healthy = has_online_peers;
-        
+
         if !health.is_healthy {
             health.error_count += 1;
             health.last_error = Some("No online peers available".to_string());
         }
-        
+
         health.clone()
     }
 
     pub async fn update_peer_status(&self, node_id: &str, is_online: bool) -> Result<()> {
         let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         let mut peers = self.peers.write().await;
-        
+
         if let Some(peer) = peers.get_mut(node_id) {
             peer.is_online = is_online;
             peer.last_seen = now;
-            
+
             if is_online {
                 peer.connection_attempts = 0;
                 peer.success_rate = (peer.success_rate * 0.9) + 0.1; // Moving average
             } else {
                 peer.connection_attempts += 1;
-                peer.success_rate = peer.success_rate * 0.9; // Decrease success rate
+                peer.success_rate *= 0.9; // Decrease success rate
             }
         }
-        
+
         Ok(())
     }
 
     // Failover methods
     pub async fn get_best_peer(&self) -> Option<String> {
         let peers = self.peers.read().await;
-        let online_peers: Vec<_> = peers
-            .iter()
-            .filter(|(_, peer)| peer.is_online)
-            .collect();
-        
+        let online_peers: Vec<_> = peers.iter().filter(|(_, peer)| peer.is_online).collect();
+
         if online_peers.is_empty() {
             return None;
         }
-        
+
         // Return the peer with the highest success rate
         online_peers
             .iter()
@@ -235,7 +243,7 @@ impl LightningEngine {
 
     pub async fn failover_to_next_peer(&self) -> Result<Option<String>> {
         let best_peer = self.get_best_peer().await;
-        
+
         if let Some(peer_id) = best_peer {
             self.set_primary_peer(Some(peer_id.clone())).await?;
             Ok(Some(peer_id))
@@ -248,7 +256,7 @@ impl LightningEngine {
     // Enhanced payment methods with failover
     pub async fn send_payment_with_failover(&self, invoice: String) -> Result<(String, String)> {
         let mut last_error = None;
-        
+
         // Try primary peer first
         if let Some(primary) = self.get_primary_peer().await {
             match self.send_payment_to_peer(&primary, &invoice).await {
@@ -259,7 +267,7 @@ impl LightningEngine {
                 }
             }
         }
-        
+
         // Try other peers
         let peers = self.get_peers().await;
         for peer in peers {
@@ -276,7 +284,7 @@ impl LightningEngine {
                 }
             }
         }
-        
+
         Err(last_error.unwrap_or_else(|| anyhow::anyhow!("All peers failed")))
     }
 
@@ -285,18 +293,18 @@ impl LightningEngine {
         if !invoice.starts_with("lnbc") {
             return Err(anyhow::anyhow!("Invalid Lightning invoice format"));
         }
-        
+
         // Simulate network delay
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         let mut hasher = Sha256::new();
         hasher.update(format!("{}{}", peer_id, invoice).as_bytes());
         let payment_hash = format!("{:x}", hasher.finalize());
         let status = "SUCCEEDED".to_string();
-        
+
         // Update peer success rate
         self.update_peer_status(peer_id, true).await?;
-        
+
         Ok((payment_hash, status))
     }
 

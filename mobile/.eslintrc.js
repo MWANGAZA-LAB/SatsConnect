@@ -6,9 +6,9 @@ module.exports = {
   },
   rules: {
     'react-hooks/exhaustive-deps': 'warn',
-    'react-native/no-inline-styles': 'warn',
     'no-unused-vars': 'warn',
     'no-console': 'warn',
+    '@typescript-eslint/no-unused-vars': 'warn',
   },
   ignorePatterns: ['node_modules/', 'dist/', '*.config.js', 'jest.setup.js'],
 };

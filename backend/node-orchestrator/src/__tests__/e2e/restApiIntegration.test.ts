@@ -113,12 +113,12 @@ describe('REST API Integration Tests', () => {
     // Wait for engine to be ready
     await testUtils.waitForEngine();
     app = createTestApp();
-    
+
     // Generate auth token for tests
-    authToken = generateToken({ 
-      id: 'test-user', 
+    authToken = generateToken({
+      id: 'test-user',
       role: 'user',
-      permissions: ['wallet:read', 'wallet:write', 'payment:read', 'payment:write']
+      permissions: ['wallet:read', 'wallet:write', 'payment:read', 'payment:write'],
     });
   });
 
@@ -362,7 +362,7 @@ describe('REST API Integration Tests', () => {
 
   describe('Performance Tests', () => {
     test('should handle concurrent requests', async () => {
-      const promises = Array.from({ length: 10 }, () => 
+      const promises = Array.from({ length: 10 }, () =>
         request(app).get('/api/wallet/balance').set('Authorization', `Bearer ${authToken}`)
       );
 

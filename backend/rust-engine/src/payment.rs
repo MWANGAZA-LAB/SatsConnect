@@ -1,8 +1,8 @@
+use anyhow::Result;
+use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::Utc;
-use anyhow::Result;
 
 // Simplified payment types for HTTP API (will be replaced with gRPC later)
 #[derive(Debug, Clone)]
@@ -30,7 +30,7 @@ impl PaymentHandler {
     }
 
     fn generate_id() -> String {
-        format!("pay_{}", uuid::Uuid::new_v4().to_string()[..8].to_string())
+        format!("pay_{}", &uuid::Uuid::new_v4().to_string()[..8])
     }
 
     pub async fn process_payment(
@@ -69,7 +69,8 @@ impl PaymentHandler {
     pub async fn get_payment_status(&self, payment_id: String) -> Result<Payment> {
         let payments = self.payments.read().await;
 
-        let payment = payments.get(&payment_id)
+        let payment = payments
+            .get(&payment_id)
             .ok_or_else(|| anyhow::anyhow!("Payment not found"))?
             .clone();
 
@@ -79,7 +80,8 @@ impl PaymentHandler {
     pub async fn process_refund(&self, payment_id: String, _amount_sats: u64) -> Result<Payment> {
         let mut payments = self.payments.write().await;
 
-        let payment = payments.get_mut(&payment_id)
+        let payment = payments
+            .get_mut(&payment_id)
             .ok_or_else(|| anyhow::anyhow!("Payment not found"))?;
 
         if payment.status != "COMPLETED" {
@@ -89,5 +91,11 @@ impl PaymentHandler {
         payment.status = "REFUNDED".to_string();
 
         Ok(payment.clone())
+    }
+}
+
+impl Default for PaymentHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }
