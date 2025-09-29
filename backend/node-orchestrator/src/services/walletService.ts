@@ -70,27 +70,31 @@ export interface BuyAirtimeResponse {
 class WalletService {
   private async callGrpcMethod<T>(
     method: string,
-    request: any,
-    clientMethod: (request: any, callback: (error: any, response: any) => void) => void
+    request: unknown,
+    clientMethod: (request: unknown, callback: (error: unknown, response: unknown) => void) => void
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`gRPC call timeout: ${method}`));
       }, 10000); // 10 second timeout
 
-      clientMethod.call(this, request, (error: any, response: any) => {
+      clientMethod.call(this, request, (error: unknown, response: unknown) => {
         clearTimeout(timeout);
 
         if (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown gRPC error';
+          const errorCode = (error as { code?: number })?.code;
+          const errorDetails = (error as { details?: string })?.details;
+          
           logger.error(`gRPC call failed: ${method}`, {
-            error: error.message,
-            code: error.code,
-            details: error.details,
+            error: errorMessage,
+            code: errorCode,
+            details: errorDetails,
           });
-          reject(new Error(`gRPC call failed: ${error.message}`));
+          reject(new Error(`gRPC call failed: ${errorMessage}`));
         } else {
           logger.debug(`gRPC call successful: ${method}`, { response });
-          resolve(response);
+          resolve(response as T);
         }
       });
     });
@@ -114,8 +118,8 @@ class WalletService {
       return {
         success: true,
         data: {
-          node_id: (response as any).node_id,
-          address: (response as any).address,
+          node_id: (response as { node_id?: string }).node_id,
+          address: (response as { address?: string }).address,
         },
       };
     } catch (error) {
@@ -140,8 +144,8 @@ class WalletService {
       return {
         success: true,
         data: {
-          confirmed_sats: (response as any).confirmed_sats,
-          lightning_sats: (response as any).lightning_sats,
+          confirmed_sats: (response as { confirmed_sats?: number }).confirmed_sats,
+          lightning_sats: (response as { lightning_sats?: number }).lightning_sats,
         },
       };
     } catch (error) {
@@ -171,8 +175,8 @@ class WalletService {
       return {
         success: true,
         data: {
-          invoice: (response as any).invoice,
-          payment_hash: (response as any).payment_hash,
+          invoice: (response as { invoice?: string }).invoice,
+          payment_hash: (response as { payment_hash?: string }).payment_hash,
         },
       };
     } catch (error) {
@@ -201,8 +205,8 @@ class WalletService {
       return {
         success: true,
         data: {
-          payment_hash: (response as any).payment_hash,
-          status: (response as any).status,
+          payment_hash: (response as { payment_hash?: string }).payment_hash,
+          status: (response as { status?: string }).status,
         },
       };
     } catch (error) {
@@ -233,9 +237,9 @@ class WalletService {
       return {
         success: true,
         data: {
-          invoice: (response as any).invoice,
-          payment_hash: (response as any).payment_hash,
-          status: (response as any).status,
+          invoice: (response as { invoice?: string }).invoice,
+          payment_hash: (response as { payment_hash?: string }).payment_hash,
+          status: (response as { status?: string }).status,
         },
       };
     } catch (error) {

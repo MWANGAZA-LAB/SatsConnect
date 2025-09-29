@@ -137,10 +137,12 @@ app.listen(port, () => {
     grpcUrl: config.rustEngine.grpcUrl,
   });
 
-  console.log(`🚀 SatsConnect Node Orchestrator listening on port ${port}`);
-  console.log(`📊 Health check: http://localhost:${port}/health`);
-  console.log(`🔗 API docs: http://localhost:${port}/`);
-  console.log(`🔧 Environment: ${config.server.nodeEnv}`);
+  logger.info('SatsConnect Node Orchestrator started', {
+    port,
+    healthCheck: `http://localhost:${port}/health`,
+    apiDocs: `http://localhost:${port}/`,
+    environment: config.server.nodeEnv,
+  });
 });
 
 export { app };

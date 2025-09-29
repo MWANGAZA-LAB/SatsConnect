@@ -5,7 +5,7 @@ import { createWalletClient, checkEngineHealth } from '../grpc';
 let rustEngineProcess: ChildProcess | null = null;
 
 beforeAll(async () => {
-  console.log('🚀 Starting Rust Engine for E2E tests...');
+  // Starting Rust Engine for E2E tests
 
   // Start the Rust engine process
   rustEngineProcess = spawn('cargo', ['run'], {
@@ -22,7 +22,7 @@ beforeAll(async () => {
     try {
       const isHealthy = await checkEngineHealth();
       if (isHealthy) {
-        console.log('✅ Rust Engine is ready for testing');
+        // Rust Engine is ready for testing
         break;
       }
     } catch (error) {
@@ -39,7 +39,7 @@ beforeAll(async () => {
 }, 60000); // 60 second timeout
 
 afterAll(async () => {
-  console.log('🛑 Stopping Rust Engine...');
+  // Stopping Rust Engine
 
   if (rustEngineProcess) {
     rustEngineProcess.kill('SIGTERM');

@@ -108,10 +108,10 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
 
   // Sanitize request body
   if (req.body && typeof req.body === 'object') {
-    const sanitizeObject = (obj: any): any => {
+    const sanitizeObject = (obj: unknown): unknown => {
       if (typeof obj === 'string') {
         // Special handling for phone numbers
-        if (obj.match(/^[\d\s\-\+\(\)]+$/) && obj.length >= 9) {
+        if (obj.match(/^[\d\s\-+()]+$/) && obj.length >= 9) {
           return sanitizePhoneNumber(obj);
         }
         return sanitizeString(obj);
@@ -120,7 +120,7 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction): 
         return obj.map(sanitizeObject);
       }
       if (obj && typeof obj === 'object') {
-        const sanitized: any = {};
+        const sanitized: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(obj)) {
           // Special handling for phone number fields
           if (key.toLowerCase().includes('phone') && typeof value === 'string') {
@@ -237,12 +237,15 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction): 
 };
 
 // Error sanitization middleware
-export const sanitizeError = (err: any, req: Request, res: Response, next: NextFunction): void => {
+export const sanitizeError = (err: unknown, req: Request, res: Response, next: NextFunction): void => {
   // Don't leak internal error details in production
   if (config.server.nodeEnv === 'production') {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    const errorStack = err instanceof Error ? err.stack : undefined;
+    
     logger.error('Internal server error', {
-      error: err.message,
-      stack: err.stack,
+      error: errorMessage,
+      stack: errorStack,
       url: req.url,
       method: req.method,
       ip: req.ip,

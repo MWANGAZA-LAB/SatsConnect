@@ -17,13 +17,18 @@ const packageDefinition = protoLoader.loadSync(
   }
 );
 
-const protoDefinition = grpc.loadPackageDefinition(packageDefinition) as any;
+const protoDefinition = grpc.loadPackageDefinition(packageDefinition) as {
+  satsconnect: {
+    wallet: { v1: unknown };
+    payment: { v1: unknown };
+  };
+};
 const walletProto = protoDefinition.satsconnect.wallet.v1;
 const paymentProto = protoDefinition.satsconnect.payment.v1;
 
 export interface GrpcClients {
-  walletClient: any;
-  paymentClient: any;
+  walletClient: unknown;
+  paymentClient: unknown;
 }
 
 class GrpcClientService {
@@ -95,9 +100,10 @@ class GrpcClientService {
         const deadline = new Date();
         deadline.setSeconds(deadline.getSeconds() + 5); // 5 second timeout
 
-        this.clients!.walletClient.GetBalance({}, { deadline }, (error: any) => {
+        (this.clients!.walletClient as { GetBalance: (request: unknown, options: unknown, callback: (error: unknown) => void) => void }).GetBalance({}, { deadline }, (error: unknown) => {
           if (error) {
-            logger.warn('gRPC health check failed', { error: error.message });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown gRPC error';
+            logger.warn('gRPC health check failed', { error: errorMessage });
             resolve(false);
           } else {
             resolve(true);
@@ -105,7 +111,8 @@ class GrpcClientService {
         });
       });
     } catch (error) {
-      logger.error('gRPC health check error', { error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('gRPC health check error', { error: errorMessage });
       return false;
     }
   }

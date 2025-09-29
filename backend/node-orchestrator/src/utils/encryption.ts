@@ -27,7 +27,7 @@ export class EncryptionService {
 
   private deriveKey(password: string, salt?: Buffer): Buffer {
     const saltBuffer = salt || crypto.randomBytes(SALT_LENGTH);
-    return crypto.pbkdf2Sync(password, saltBuffer as any, 100000, 32, 'sha512');
+    return crypto.pbkdf2Sync(password, saltBuffer as Buffer, 100000, 32, 'sha512');
   }
 
   public encrypt(text: string): string {
@@ -36,8 +36,8 @@ export class EncryptionService {
       const salt = crypto.randomBytes(SALT_LENGTH);
       const key = this.deriveKey(config.jwt.secret, salt);
 
-      const cipher = crypto.createCipheriv(ALGORITHM, key as any, iv as any);
-      cipher.setAAD(salt as any);
+      const cipher = crypto.createCipheriv(ALGORITHM, key as Buffer, iv as Buffer);
+      cipher.setAAD(salt as Buffer);
 
       let encrypted = cipher.update(text, 'utf8', 'hex');
       encrypted += cipher.final('hex');
@@ -45,7 +45,7 @@ export class EncryptionService {
       const tag = cipher.getAuthTag();
 
       // Combine salt + iv + tag + encrypted data
-      const combined = Buffer.concat([salt, iv, tag, Buffer.from(encrypted, 'hex')] as any);
+      const combined = Buffer.concat([salt, iv, tag, Buffer.from(encrypted, 'hex')]);
 
       return combined.toString('base64');
     } catch (error) {
@@ -66,11 +66,11 @@ export class EncryptionService {
 
       const key = this.deriveKey(config.jwt.secret, salt);
 
-      const decipher = crypto.createDecipheriv(ALGORITHM, key as any, iv as any);
-      decipher.setAAD(salt as any);
-      decipher.setAuthTag(tag as any);
+      const decipher = crypto.createDecipheriv(ALGORITHM, key as Buffer, iv as Buffer);
+      decipher.setAAD(salt as Buffer);
+      decipher.setAuthTag(tag as Buffer);
 
-      let decrypted = decipher.update(encrypted as any, undefined, 'utf8');
+      let decrypted = decipher.update(encrypted as Buffer, undefined, 'utf8');
       decrypted += decipher.final('utf8');
 
       return decrypted;
@@ -90,7 +90,7 @@ export class EncryptionService {
 
   public verifyHash(text: string, hash: string): boolean {
     const computedHash = this.hash(text);
-    return crypto.timingSafeEqual(Buffer.from(computedHash) as any, Buffer.from(hash) as any);
+    return crypto.timingSafeEqual(Buffer.from(computedHash), Buffer.from(hash));
   }
 }
 

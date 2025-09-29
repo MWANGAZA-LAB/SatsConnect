@@ -35,7 +35,15 @@ router.post(
   async (req: express.Request, res: express.Response) => {
     try {
       const signature = req.headers['x-mpesa-signature'] as string;
-      const callback: any = req.body;
+      const callback = req.body as {
+        Body?: {
+          stkCallback?: {
+            MerchantRequestID?: string;
+            CheckoutRequestID?: string;
+            ResultCode?: number;
+          };
+        };
+      };
 
       logger.info('MPesa callback received:', {
         merchantRequestID: callback.Body?.stkCallback?.MerchantRequestID,
@@ -97,8 +105,9 @@ router.post(
         success: true,
         message: 'Callback processed',
       });
-    } catch (error: any) {
-      logger.error('MPesa callback processing failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('MPesa callback processing failed:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Callback processing failed',
@@ -121,7 +130,14 @@ router.post(
   async (req: express.Request, res: express.Response) => {
     try {
       const signature = req.headers['x-signature'] as string;
-      const callback: any = req.body;
+      const callback = req.body as {
+        transactionId?: string;
+        status?: string;
+        amount?: number;
+        phoneNumber?: string;
+        provider?: string;
+        message?: string;
+      };
 
       logger.info('Airtime callback received:', {
         transactionId: callback.transactionId,
@@ -181,8 +197,9 @@ router.post(
         success: true,
         message: 'Callback processed',
       });
-    } catch (error: any) {
-      logger.error('Airtime callback processing failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Airtime callback processing failed:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Callback processing failed',
@@ -195,7 +212,12 @@ router.post(
 router.post('/mpesa/payout', async (req: express.Request, res: express.Response) => {
   try {
     const signature = req.headers['x-mpesa-signature'] as string;
-    const callback: any = req.body;
+    const callback = req.body as {
+      OriginatorConversationID?: string;
+      ConversationID?: string;
+      ResultCode?: number;
+      ResultDesc?: string;
+    };
 
     logger.info('MPesa payout callback received:', {
       originatorConversationID: callback.OriginatorConversationID,
@@ -245,8 +267,9 @@ router.post('/mpesa/payout', async (req: express.Request, res: express.Response)
       success: true,
       message: 'Payout callback processed',
     });
-  } catch (error: any) {
-    logger.error('MPesa payout callback processing failed:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('MPesa payout callback processing failed:', { error: errorMessage });
     res.status(500).json({
       success: false,
       error: 'Payout callback processing failed',

@@ -1,4 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
+import { logger } from './utils/logger';
 
 // HTTP client for Rust engine instead of gRPC
 const RUST_ENGINE_BASE_URL = process.env.RUST_ENGINE_ADDR || 'http://127.0.0.1:50051';
@@ -41,11 +42,8 @@ export class WalletClient {
         { label: label || 'default', mnemonic: mnemonic || '' }
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to create wallet',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 
@@ -55,11 +53,8 @@ export class WalletClient {
         `${this.baseUrl}/api/wallet/balance`
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to get balance',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 
@@ -70,11 +65,8 @@ export class WalletClient {
         { amount_sats: amountSats, memo }
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to create invoice',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 
@@ -85,11 +77,8 @@ export class WalletClient {
         { invoice }
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to send payment',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 }
@@ -121,11 +110,8 @@ export class PaymentClient {
         }
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to process payment',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 
@@ -135,11 +121,8 @@ export class PaymentClient {
         `${this.baseUrl}/api/payments/status/${paymentId}`
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to get payment status',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 
@@ -150,11 +133,8 @@ export class PaymentClient {
         { payment_id: paymentId, amount_sats: amountSats }
       );
       return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.response?.data?.error || error.message || 'Failed to process refund',
-      };
+    } catch (error: unknown) {
+      return handleHttpError(error);
     }
   }
 }
@@ -169,15 +149,18 @@ export function createPaymentClient(address = RUST_ENGINE_BASE_URL): PaymentClie
 }
 
 // Utility function to handle HTTP errors
-export function handleHttpError(error: any): { success: boolean; error?: string; code?: number } {
+export function handleHttpError(error: unknown): { success: boolean; error?: string; code?: number } {
   if (!error) {
     return { success: true };
   }
 
+  const errorMessage = error instanceof Error ? error.message : 'Unknown HTTP error';
+  const statusCode = (error as { response?: { status?: number } })?.response?.status || 500;
+
   return {
     success: false,
-    error: error.message || 'Unknown HTTP error',
-    code: error.response?.status || 500,
+    error: errorMessage,
+    code: statusCode,
   };
 }
 
@@ -212,7 +195,7 @@ export async function checkEngineHealth(address = RUST_ENGINE_BASE_URL): Promise
       socket.connect(parseInt(port) || 50051, host || '127.0.0.1');
     });
   } catch (error) {
-    console.error('Engine health check failed:', error);
+    logger.error('Engine health check failed:', { error: error.message });
     return false;
   }
 }

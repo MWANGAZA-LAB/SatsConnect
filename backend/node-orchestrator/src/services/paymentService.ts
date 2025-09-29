@@ -60,27 +60,31 @@ export interface RefundPaymentResponse {
 class PaymentService {
   private async callGrpcMethod<T>(
     method: string,
-    request: any,
-    clientMethod: (request: any, callback: (error: any, response: any) => void) => void
+    request: unknown,
+    clientMethod: (request: unknown, callback: (error: unknown, response: unknown) => void) => void
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`gRPC call timeout: ${method}`));
       }, 10000); // 10 second timeout
 
-      clientMethod.call(this, request, (error: any, response: any) => {
+      clientMethod.call(this, request, (error: unknown, response: unknown) => {
         clearTimeout(timeout);
 
         if (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown gRPC error';
+          const errorCode = (error as { code?: number })?.code;
+          const errorDetails = (error as { details?: string })?.details;
+          
           logger.error(`gRPC call failed: ${method}`, {
-            error: error.message,
-            code: error.code,
-            details: error.details,
+            error: errorMessage,
+            code: errorCode,
+            details: errorDetails,
           });
-          reject(new Error(`gRPC call failed: ${error.message}`));
+          reject(new Error(`gRPC call failed: ${errorMessage}`));
         } else {
           logger.debug(`gRPC call successful: ${method}`, { response });
-          resolve(response);
+          resolve(response as T);
         }
       });
     });
@@ -107,12 +111,12 @@ class PaymentService {
       return {
         success: true,
         data: {
-          payment_id: (response as any).payment_id,
-          status: (response as any).status,
-          message: (response as any).message,
-          amount_sats: (response as any).amount_sats,
-          payment_hash: (response as any).payment_hash,
-          timestamp: (response as any).timestamp,
+          payment_id: (response as { payment_id?: string }).payment_id,
+          status: (response as { status?: string }).status,
+          message: (response as { message?: string }).message,
+          amount_sats: (response as { amount_sats?: number }).amount_sats,
+          payment_hash: (response as { payment_hash?: string }).payment_hash,
+          timestamp: (response as { timestamp?: string }).timestamp,
         },
       };
     } catch (error) {
@@ -143,12 +147,12 @@ class PaymentService {
       return {
         success: true,
         data: {
-          payment_id: (response as any).payment_id,
-          status: (response as any).status,
-          message: (response as any).message,
-          amount_sats: (response as any).amount_sats,
-          payment_hash: (response as any).payment_hash,
-          timestamp: (response as any).timestamp,
+          payment_id: (response as { payment_id?: string }).payment_id,
+          status: (response as { status?: string }).status,
+          message: (response as { message?: string }).message,
+          amount_sats: (response as { amount_sats?: number }).amount_sats,
+          payment_hash: (response as { payment_hash?: string }).payment_hash,
+          timestamp: (response as { timestamp?: string }).timestamp,
         },
       };
     } catch (error) {
@@ -178,12 +182,12 @@ class PaymentService {
       return {
         success: true,
         data: {
-          payment_id: (response as any).payment_id,
-          status: (response as any).status,
-          message: (response as any).message,
-          amount_sats: (response as any).amount_sats,
-          payment_hash: (response as any).payment_hash,
-          timestamp: (response as any).timestamp,
+          payment_id: (response as { payment_id?: string }).payment_id,
+          status: (response as { status?: string }).status,
+          message: (response as { message?: string }).message,
+          amount_sats: (response as { amount_sats?: number }).amount_sats,
+          payment_hash: (response as { payment_hash?: string }).payment_hash,
+          timestamp: (response as { timestamp?: string }).timestamp,
         },
       };
     } catch (error) {

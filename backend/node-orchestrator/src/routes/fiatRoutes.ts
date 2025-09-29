@@ -84,8 +84,9 @@ router.post(
           message: 'STK Push initiated. Please check your phone to complete the transaction.',
         },
       });
-    } catch (error: any) {
-      logger.error('MPesa buy request failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('MPesa buy request failed:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Failed to initiate MPesa buy transaction',
@@ -146,8 +147,9 @@ router.post(
           message: 'Payout initiated. Processing will begin shortly.',
         },
       });
-    } catch (error: any) {
-      logger.error('MPesa payout request failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('MPesa payout request failed:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Failed to initiate MPesa payout transaction',
@@ -207,8 +209,9 @@ router.post(
           message: 'Airtime purchase initiated. Processing will begin shortly.',
         },
       });
-    } catch (error: any) {
-      logger.error('Airtime purchase request failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Airtime purchase request failed:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Failed to initiate airtime purchase',
@@ -250,8 +253,9 @@ router.get(
           returnValue: jobStatus.returnvalue,
         },
       });
-    } catch (error: any) {
-      logger.error('Get transaction status failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Get transaction status failed:', { error: errorMessage });
       res.status(500).json({
         success: false,
         error: 'Failed to get transaction status',

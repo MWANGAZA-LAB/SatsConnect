@@ -15,7 +15,7 @@ export interface FiatTransaction {
   reference: string;
   createdAt: Date;
   updatedAt: Date;
-  metadata: any;
+  metadata: Record<string, unknown>;
   error?: string;
 }
 
@@ -163,13 +163,14 @@ class QueueService {
         merchantRequestID: stkResponse.MerchantRequestID,
         checkoutRequestID: stkResponse.CheckoutRequestID,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('MPesa buy job failed:', {
         transactionId,
-        error: error.message,
+        error: errorMessage,
       });
 
-      await this.updateTransactionStatus(transactionId, 'failed', error.message);
+      await this.updateTransactionStatus(transactionId, 'failed', errorMessage);
       throw error;
     }
   }
@@ -212,13 +213,14 @@ class QueueService {
         originatorConversationID: payoutResponse.OriginatorConversationID,
         conversationID: payoutResponse.ConversationID,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('MPesa payout job failed:', {
         transactionId,
-        error: error.message,
+        error: errorMessage,
       });
 
-      await this.updateTransactionStatus(transactionId, 'failed', error.message);
+      await this.updateTransactionStatus(transactionId, 'failed', errorMessage);
       throw error;
     }
   }
@@ -241,7 +243,7 @@ class QueueService {
       const airtimeResponse = await airtimeService.buyAirtime({
         phoneNumber,
         amount,
-        provider: provider as any,
+        provider: provider as string,
         reference,
       });
 
@@ -262,13 +264,14 @@ class QueueService {
         airtimeTransactionId: airtimeResponse.transactionId,
         status: finalStatus,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Airtime purchase job failed:', {
         transactionId,
-        error: error.message,
+        error: errorMessage,
       });
 
-      await this.updateTransactionStatus(transactionId, 'failed', error.message);
+      await this.updateTransactionStatus(transactionId, 'failed', errorMessage);
       throw error;
     }
   }
@@ -339,7 +342,7 @@ class QueueService {
     });
   }
 
-  private async updateTransactionMetadata(transactionId: string, metadata: any): Promise<void> {
+  private async updateTransactionMetadata(transactionId: string, metadata: Record<string, unknown>): Promise<void> {
     // In a real implementation, this would update a database
     logger.info('Transaction metadata updated:', {
       transactionId,
@@ -348,7 +351,7 @@ class QueueService {
     });
   }
 
-  async getJobStatus(jobId: string): Promise<any> {
+  async getJobStatus(jobId: string): Promise<unknown> {
     // Check all queues for the job
     const queues = [this.mpesaBuyQueue, this.mpesaPayoutQueue, this.airtimeQueue];
 

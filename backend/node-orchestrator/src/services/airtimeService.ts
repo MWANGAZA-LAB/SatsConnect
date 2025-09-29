@@ -138,12 +138,14 @@ class AirtimeService {
       } else {
         throw new Error(result.message || 'Airtime purchase failed');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const responseError = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
       logger.error('Chimoney airtime purchase failed:', {
-        error: error.message,
+        error: errorMessage,
         request,
       });
-      throw new Error(`Airtime purchase failed: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Airtime purchase failed: ${responseError || errorMessage}`);
     }
   }
 
@@ -187,12 +189,14 @@ class AirtimeService {
         status: result.status === 'completed' ? 'success' : 'pending',
         message: result.message,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const responseError = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
       logger.error('KotaniPay airtime purchase failed:', {
-        error: error.message,
+        error: errorMessage,
         request,
       });
-      throw new Error(`Airtime purchase failed: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Airtime purchase failed: ${responseError || errorMessage}`);
     }
   }
 
@@ -236,12 +240,14 @@ class AirtimeService {
         status: result.status === 'completed' ? 'success' : 'pending',
         message: result.message,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const responseError = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
       logger.error('Bitnob airtime purchase failed:', {
-        error: error.message,
+        error: errorMessage,
         request,
       });
-      throw new Error(`Airtime purchase failed: ${error.response?.data?.message || error.message}`);
+      throw new Error(`Airtime purchase failed: ${responseError || errorMessage}`);
     }
   }
 
@@ -317,12 +323,13 @@ class AirtimeService {
         status: result.status === 'completed' ? 'success' : result.status,
         message: result.message,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to get airtime transaction status:', {
-        error: error.message,
+        error: errorMessage,
         transactionId,
       });
-      throw new Error(`Failed to get transaction status: ${error.message}`);
+      throw new Error(`Failed to get transaction status: ${errorMessage}`);
     }
   }
 }

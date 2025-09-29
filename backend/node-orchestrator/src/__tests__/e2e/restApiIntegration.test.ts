@@ -86,8 +86,8 @@ const createTestApp = () => {
   });
 
   // Error handling middleware
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('Unhandled error:', err);
+  app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Unhandled error in test
     res.status(500).json({
       success: false,
       error: 'Internal server error',

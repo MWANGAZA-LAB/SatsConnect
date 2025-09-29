@@ -130,8 +130,9 @@ class MpesaService {
       logger.info('MPesa authentication successful', {
         expiresIn: data.expires_in,
       });
-    } catch (error: any) {
-      logger.error('MPesa authentication failed:', error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('MPesa authentication failed:', errorMessage);
       throw new Error('Failed to authenticate with MPesa API');
     }
   }
@@ -187,16 +188,18 @@ class MpesaService {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const responseError = (error as { response?: { data?: { errorMessage?: string } } })?.response?.data?.errorMessage;
       logger.error('STK Push initiation failed:', {
-        error: error.message,
+        error: errorMessage,
         request,
       });
-      throw new Error(`STK Push failed: ${error.response?.data?.errorMessage || error.message}`);
+      throw new Error(`STK Push failed: ${responseError || errorMessage}`);
     }
   }
 
-  async queryStkPushStatus(checkoutRequestID: string): Promise<any> {
+  async queryStkPushStatus(checkoutRequestID: string): Promise<unknown> {
     try {
       const timestamp = this.generateTimestamp();
       const password = this.generatePassword();
@@ -216,12 +219,13 @@ class MpesaService {
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('STK Push status query failed:', {
-        error: error.message,
+        error: errorMessage,
         checkoutRequestID,
       });
-      throw new Error(`STK Push status query failed: ${error.message}`);
+      throw new Error(`STK Push status query failed: ${errorMessage}`);
     }
   }
 
@@ -260,12 +264,14 @@ class MpesaService {
       });
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const responseError = (error as { response?: { data?: { errorMessage?: string } } })?.response?.data?.errorMessage;
       logger.error('Payout initiation failed:', {
-        error: error.message,
+        error: errorMessage,
         request,
       });
-      throw new Error(`Payout failed: ${error.response?.data?.errorMessage || error.message}`);
+      throw new Error(`Payout failed: ${responseError || errorMessage}`);
     }
   }
 
@@ -298,7 +304,7 @@ class MpesaService {
     const stkCallback = callback.Body.stkCallback;
     const metadata = stkCallback.CallbackMetadata?.Item || [];
 
-    const details: any = {
+    const details: Record<string, unknown> = {
       merchantRequestID: stkCallback.MerchantRequestID,
       checkoutRequestID: stkCallback.CheckoutRequestID,
       resultCode: stkCallback.ResultCode,
