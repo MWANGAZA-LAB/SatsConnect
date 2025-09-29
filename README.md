@@ -99,6 +99,40 @@ A **non-custodial Bitcoin + Lightning wallet** with **MPesa fiat on/off ramp** f
 - **Redis** 5.0+ (for queues)
 - **Docker** (for containerized deployment)
 - **Expo CLI** (for mobile development)
+- **Protocol Buffers Compiler (protoc)** (for gRPC proto compilation)
+
+### Install Protocol Buffers Compiler
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y protobuf-compiler
+protoc --version  # Verify installation
+```
+
+**macOS:**
+```bash
+brew install protobuf
+protoc --version  # Verify installation
+```
+
+**Windows:**
+```bash
+# Using Chocolatey
+choco install protoc
+
+# Or download from: https://github.com/protocolbuffers/protobuf/releases
+```
+
+**Alternative - Use Bundled protoc:**
+The project includes a bundled protoc binary. Set the environment variable:
+```bash
+# Windows
+set PROTOC=.\backend\rust-engine\protoc\bin\protoc.exe
+
+# Linux/macOS
+export PROTOC=./backend/rust-engine/protoc/bin/protoc
+```
 
 ## 🚀 Quick Start
 
