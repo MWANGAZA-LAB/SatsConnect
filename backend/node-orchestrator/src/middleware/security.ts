@@ -5,7 +5,7 @@ import config from '../config/index';
 import logger from '../utils/logger';
 import { body, validationResult } from 'express-validator';
 
-// Rate limiting middleware
+// General rate limiting middleware
 export const createRateLimit = () => {
   return rateLimit({
     windowMs: config.rateLimit.windowMs,
@@ -25,6 +25,58 @@ export const createRateLimit = () => {
       res.status(429).json({
         success: false,
         error: 'Too many requests from this IP, please try again later.',
+      });
+    },
+  });
+};
+
+// Strict rate limiting for sensitive endpoints (payments, airtime, payouts)
+export const createStrictRateLimit = () => {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Only 10 requests per 15 minutes
+    message: {
+      success: false,
+      error: 'Too many sensitive operations from this IP. Please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response) => {
+      logger.warn('Strict rate limit exceeded for sensitive endpoint', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        path: req.path,
+        timestamp: new Date().toISOString(),
+      });
+      res.status(429).json({
+        success: false,
+        error: 'Too many sensitive operations from this IP. Please try again later.',
+      });
+    },
+  });
+};
+
+// Very strict rate limiting for authentication endpoints
+export const createAuthRateLimit = () => {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Only 5 auth attempts per 15 minutes
+    message: {
+      success: false,
+      error: 'Too many authentication attempts. Please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response) => {
+      logger.warn('Auth rate limit exceeded', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        path: req.path,
+        timestamp: new Date().toISOString(),
+      });
+      res.status(429).json({
+        success: false,
+        error: 'Too many authentication attempts. Please try again later.',
       });
     },
   });

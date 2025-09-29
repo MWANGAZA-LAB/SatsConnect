@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth';
-import { sanitizeError } from '../middleware/security';
+import { sanitizeError, createStrictRateLimit } from '../middleware/security';
 import mpesaService from '../services/mpesaService';
 import airtimeService from '../services/airtimeService';
 import queueService from '../services/queueService';
@@ -36,6 +36,7 @@ const generateTransactionId = (): string => {
 router.post(
   '/mpesa/buy',
   [
+    createStrictRateLimit(),
     authenticateToken,
     body('phoneNumber').isMobilePhone('en-KE').withMessage('Valid Kenyan phone number required'),
     body('amount')
@@ -99,6 +100,7 @@ router.post(
 router.post(
   '/mpesa/payout',
   [
+    createStrictRateLimit(),
     authenticateToken,
     body('phoneNumber').isMobilePhone('en-KE').withMessage('Valid Kenyan phone number required'),
     body('amount')
@@ -162,6 +164,7 @@ router.post(
 router.post(
   '/airtime',
   [
+    createStrictRateLimit(),
     authenticateToken,
     body('phoneNumber').isMobilePhone('en-KE').withMessage('Valid Kenyan phone number required'),
     body('amount')

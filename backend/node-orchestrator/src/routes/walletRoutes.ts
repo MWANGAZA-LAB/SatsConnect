@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import walletService from '../services/walletService';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { createStrictRateLimit } from '../middleware/security';
 import {
   validateCreateWallet,
   validateWalletId,
@@ -177,6 +178,7 @@ router.post(
 // POST /api/wallet/payment/send
 router.post(
   '/payment/send',
+  createStrictRateLimit(),
   validateSendPayment,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -231,6 +233,7 @@ router.post(
 // POST /api/wallet/airtime/buy
 router.post(
   '/airtime/buy',
+  createStrictRateLimit(),
   validateBuyAirtime,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
