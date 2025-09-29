@@ -20,6 +20,10 @@ path = "test_client.rs"
 name = "test_payment_client"
 path = "test_payment_client.rs"
 
+[[bin]]
+name = "test_wallet_client"
+path = "test_wallet_client.rs"
+
 [dependencies]
 anyhow = "1"
 thiserror = "1"

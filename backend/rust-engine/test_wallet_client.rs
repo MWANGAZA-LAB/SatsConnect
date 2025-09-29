@@ -1,16 +1,47 @@
 use anyhow::Result;
 use satsconnect_rust_engine::proto::satsconnect::wallet::v1::wallet_service_client::WalletServiceClient;
-use satsconnect_rust_engine::proto::satsconnect::wallet::v1::{NewInvoiceRequest, SendPaymentRequest};
-use satsconnect_rust_engine::proto::satsconnect::payment::v1::payment_service_client::PaymentServiceClient;
-use satsconnect_rust_engine::proto::satsconnect::payment::v1::PaymentRequest;
+use satsconnect_rust_engine::proto::satsconnect::wallet::v1::{CreateWalletRequest, NewInvoiceRequest, SendPaymentRequest, GetBalanceRequest};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("🧪 Testing gRPC Payment Service...");
+    println!("🧪 Testing gRPC Wallet Service...");
     
     let mut wallet_client = WalletServiceClient::connect("http://127.0.0.1:50051").await?;
-    let mut payment_client = PaymentServiceClient::connect("http://127.0.0.1:50051").await?;
-    println!("✅ Connected to gRPC servers");
+    println!("✅ Connected to gRPC wallet server");
+
+    // Test CreateWallet
+    let request = tonic::Request::new(CreateWalletRequest {
+        label: "test_wallet".to_string(),
+        mnemonic: "".to_string(), // Empty mnemonic will generate a new one
+    });
+    
+    match wallet_client.create_wallet(request).await {
+        Ok(response) => {
+            let wallet = response.into_inner();
+            println!("✅ CreateWallet successful:");
+            println!("  Node ID: {}", wallet.node_id);
+            println!("  Address: {}", wallet.address);
+        }
+        Err(e) => {
+            println!("❌ CreateWallet failed: {}", e);
+            return Ok(());
+        }
+    }
+
+    // Test GetBalance
+    let request = tonic::Request::new(GetBalanceRequest {});
+    
+    match wallet_client.get_balance(request).await {
+        Ok(response) => {
+            let balance = response.into_inner();
+            println!("✅ GetBalance successful:");
+            println!("  Confirmed: {} sats", balance.confirmed_sats);
+            println!("  Lightning: {} sats", balance.lightning_sats);
+        }
+        Err(e) => {
+            println!("❌ GetBalance failed: {}", e);
+        }
+    }
 
     // Test NewInvoice
     let request = tonic::Request::new(NewInvoiceRequest {
@@ -47,28 +78,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Test PaymentService
-    let request = tonic::Request::new(PaymentRequest {
-        payment_id: "test_payment_123".to_string(),
-        wallet_id: "test_wallet".to_string(),
-        amount_sats: 500,
-        invoice: "lnbc500u1p3k2v5cpp5test".to_string(),
-        description: "Test payment".to_string(),
-    });
-    
-    match payment_client.process_payment(request).await {
-        Ok(response) => {
-            let payment = response.into_inner();
-            println!("✅ ProcessPayment successful:");
-            println!("  Payment ID: {}", payment.payment_id);
-            println!("  Status: {}", payment.status);
-            println!("  Amount: {} sats", payment.amount_sats);
-        }
-        Err(e) => {
-            println!("❌ ProcessPayment failed: {}", e);
-        }
-    }
-
-    println!("🎉 gRPC Payment Service test completed!");
+    println!("🎉 gRPC Wallet Service test completed!");
     Ok(())
 }

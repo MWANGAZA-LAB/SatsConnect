@@ -59,6 +59,7 @@ class QueueService {
     this.redis = new IORedis(config.redis.url, {
       password: config.redis.password,
       maxRetriesPerRequest: null,
+      enableReadyCheck: false,
     });
 
     this.mpesaBuyQueue = new Queue('mpesa-buy', { connection: this.redis });

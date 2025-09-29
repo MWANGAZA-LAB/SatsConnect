@@ -1,7 +1,7 @@
 use anyhow::Result;
 use satsconnect_rust_engine::{wallet::WalletHandler, payment::PaymentHandler};
-use satsconnect_rust_engine::proto::satsconnect::wallet::v1::wallet_service_server::{WalletService, WalletServiceServer};
-use satsconnect_rust_engine::proto::satsconnect::payment::v1::payment_service_server::{PaymentService, PaymentServiceServer};
+use satsconnect_rust_engine::proto::satsconnect::wallet::v1::wallet_service_server::WalletServiceServer;
+use satsconnect_rust_engine::proto::satsconnect::payment::v1::payment_service_server::PaymentServiceServer;
 use std::sync::Arc;
 use tonic::transport::Server;
 
