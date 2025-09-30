@@ -1,7 +1,16 @@
 // Mock gRPC clients for testing when Rust engine is not available
 
+interface MockRequest {
+  mnemonic?: string;
+  amountSats?: number;
+  invoice?: string;
+  phoneNumber?: string;
+  provider?: string;
+  paymentId?: string;
+}
+
 export const mockWalletClient = {
-  createWallet: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  createWallet: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (request.mnemonic && request.mnemonic.split(' ').length < 12) {
         callback({ code: 3, message: 'Invalid mnemonic' }, null);
@@ -14,7 +23,7 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  getBalance: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  getBalance: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         confirmedSats: '1000000',
@@ -23,21 +32,21 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  newInvoice: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  newInvoice: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
-      if (request.amountSats < 0) {
+      if (request.amountSats && request.amountSats < 0) {
         callback({ code: 3, message: 'Invalid amount' }, null);
       } else {
         callback(null, {
-          invoice: 'lnbc' + request.amountSats + 'u1p3k2v5cpp5' + Math.random().toString(36),
+          invoice: 'lnbc' + (request.amountSats || 1000) + 'u1p3k2v5cpp5' + Math.random().toString(36),
           paymentHash: 'mock-payment-hash-' + Date.now(),
-          amountSats: request.amountSats,
+          amountSats: request.amountSats || 1000,
         });
       }
     }, 100);
   },
 
-  sendPayment: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  sendPayment: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (!request.invoice || request.invoice.length < 10) {
         callback({ code: 3, message: 'Invalid invoice' }, null);
@@ -50,12 +59,12 @@ export const mockWalletClient = {
     }, 100);
   },
 
-  buyAirtime: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  buyAirtime: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
-        invoice: 'lnbc' + request.amountSats + 'u1p3k2v5cpp5' + Math.random().toString(36),
+        invoice: 'lnbc' + (request.amountSats || 1000) + 'u1p3k2v5cpp5' + Math.random().toString(36),
         paymentHash: 'mock-airtime-hash-' + Date.now(),
-        amountSats: request.amountSats,
+        amountSats: request.amountSats || 1000,
         phoneNumber: request.phoneNumber,
         provider: request.provider || 'MTN',
       });
@@ -64,7 +73,7 @@ export const mockWalletClient = {
 };
 
 export const mockPaymentClient = {
-  processPayment: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  processPayment: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       if (!request.paymentId || request.paymentId.length === 0) {
         callback({ code: 3, message: 'Invalid payment ID' }, null);
@@ -72,7 +81,7 @@ export const mockPaymentClient = {
         callback(null, {
           paymentId: request.paymentId,
           status: 'COMPLETED',
-          amountSats: request.amountSats,
+          amountSats: request.amountSats || 1000,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
@@ -80,7 +89,7 @@ export const mockPaymentClient = {
     }, 100);
   },
 
-  getPaymentStatus: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  getPaymentStatus: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         paymentId: request.paymentId,
@@ -93,12 +102,12 @@ export const mockPaymentClient = {
     }, 100);
   },
 
-  processRefund: (request: unknown, callback: (error: unknown, response: unknown) => void) => {
+  processRefund: (request: MockRequest, callback: (error: unknown, response: unknown) => void) => {
     setTimeout(() => {
       callback(null, {
         paymentId: request.paymentId,
         status: 'REFUNDED',
-        refundAmountSats: request.amountSats,
+        refundAmountSats: request.amountSats || 1000,
         updatedAt: new Date().toISOString(),
       });
     }, 100);

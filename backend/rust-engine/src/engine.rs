@@ -225,7 +225,7 @@ impl LightningEngine {
         Ok(())
     }
 
-    // Failover methods
+    // Enhanced failover methods
     pub async fn get_best_peer(&self) -> Option<String> {
         let peers = self.peers.read().await;
         let online_peers: Vec<_> = peers.iter().filter(|(_, peer)| peer.is_online).collect();
@@ -234,11 +234,40 @@ impl LightningEngine {
             return None;
         }
 
-        // Return the peer with the highest success rate
+        // Return the peer with the highest success rate and lowest connection attempts
         online_peers
             .iter()
-            .max_by(|a, b| a.1.success_rate.partial_cmp(&b.1.success_rate).unwrap())
+            .max_by(|a, b| {
+                // Primary sort by success rate, secondary by connection attempts (lower is better)
+                let success_cmp = a.1.success_rate.partial_cmp(&b.1.success_rate).unwrap();
+                if success_cmp == std::cmp::Ordering::Equal {
+                    b.1.connection_attempts.cmp(&a.1.connection_attempts)
+                } else {
+                    success_cmp
+                }
+            })
             .map(|(node_id, _)| (*node_id).clone())
+    }
+
+    pub async fn get_peer_by_priority(&self) -> Vec<String> {
+        let peers = self.peers.read().await;
+        let mut online_peers: Vec<_> = peers
+            .iter()
+            .filter(|(_, peer)| peer.is_online)
+            .map(|(node_id, peer)| (node_id.clone(), peer.clone()))
+            .collect();
+
+        // Sort by success rate (descending) and connection attempts (ascending)
+        online_peers.sort_by(|a, b| {
+            let success_cmp = b.1.success_rate.partial_cmp(&a.1.success_rate).unwrap();
+            if success_cmp == std::cmp::Ordering::Equal {
+                a.1.connection_attempts.cmp(&b.1.connection_attempts)
+            } else {
+                success_cmp
+            }
+        });
+
+        online_peers.into_iter().map(|(node_id, _)| node_id).collect()
     }
 
     pub async fn failover_to_next_peer(&self) -> Result<Option<String>> {
@@ -251,6 +280,81 @@ impl LightningEngine {
             self.set_primary_peer(None).await?;
             Ok(None)
         }
+    }
+
+    // Enhanced peer management methods
+    pub async fn add_peers_batch(&self, peer_list: Vec<(String, String)>) -> Result<usize> {
+        let mut added_count = 0;
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        
+        let mut peers = self.peers.write().await;
+        for (node_id, address) in peer_list {
+            if !peers.contains_key(&node_id) {
+                let peer = PeerNode {
+                    node_id: node_id.clone(),
+                    address,
+                    is_online: true,
+                    last_seen: now,
+                    connection_attempts: 0,
+                    success_rate: 1.0,
+                };
+                peers.insert(node_id, peer);
+                added_count += 1;
+            }
+        }
+        
+        Ok(added_count)
+    }
+
+    pub async fn get_peer_stats(&self) -> HashMap<String, (bool, f64, u32)> {
+        let peers = self.peers.read().await;
+        peers
+            .iter()
+            .map(|(node_id, peer)| {
+                (node_id.clone(), (peer.is_online, peer.success_rate, peer.connection_attempts))
+            })
+            .collect()
+    }
+
+    pub async fn reset_peer_stats(&self, node_id: &str) -> Result<()> {
+        let mut peers = self.peers.write().await;
+        if let Some(peer) = peers.get_mut(node_id) {
+            peer.connection_attempts = 0;
+            peer.success_rate = 1.0;
+            peer.is_online = true;
+            peer.last_seen = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        }
+        Ok(())
+    }
+
+    pub async fn get_offline_peers(&self) -> Vec<String> {
+        let peers = self.peers.read().await;
+        peers
+            .iter()
+            .filter(|(_, peer)| !peer.is_online)
+            .map(|(node_id, _)| node_id.clone())
+            .collect()
+    }
+
+    pub async fn cleanup_old_peers(&self, max_age_seconds: u64) -> Result<usize> {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        let mut peers = self.peers.write().await;
+        let mut removed_count = 0;
+        
+        let to_remove: Vec<String> = peers
+            .iter()
+            .filter(|(_, peer)| {
+                !peer.is_online && (now - peer.last_seen) > max_age_seconds
+            })
+            .map(|(node_id, _)| node_id.clone())
+            .collect();
+
+        for node_id in to_remove {
+            peers.remove(&node_id);
+            removed_count += 1;
+        }
+
+        Ok(removed_count)
     }
 
     // Enhanced payment methods with failover

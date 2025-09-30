@@ -25,7 +25,7 @@ const fileFormat = winston.format((info) => {
 
 // Create logger instance
 const logger = winston.createLogger({
-  level: config.logging.level,
+  level: config?.logging?.level || 'info',
   format: combine(
     fileFormat(),
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -51,7 +51,7 @@ const logger = winston.createLogger({
 });
 
 // If we're not in production, log to the console as well
-if (config.server.nodeEnv !== 'production') {
+if (config?.server?.nodeEnv !== 'production') {
   logger.add(
     new winston.transports.Console({
       format: combine(colorize(), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), consoleFormat),
@@ -185,134 +185,6 @@ const securityLogger = winston.createLogger({
   ],
 });
 
-// Enhanced logger with audit capabilities
-class EnhancedLogger {
-  private logger: winston.Logger;
-  private auditLogger: winston.Logger;
-  private securityLogger: winston.Logger;
-
-  constructor() {
-    this.logger = logger;
-    this.auditLogger = auditLogger;
-    this.securityLogger = securityLogger;
-  }
-
-  // Standard logging methods with redaction
-  info(message: string, meta?: Record<string, unknown>): void {
-    this.logger.info(message, redactSensitiveDataAdvanced(meta));
-  }
-
-  warn(message: string, meta?: Record<string, unknown>): void {
-    this.logger.warn(message, redactSensitiveDataAdvanced(meta));
-  }
-
-  error(message: string, meta?: Record<string, unknown>): void {
-    this.logger.error(message, redactSensitiveDataAdvanced(meta));
-  }
-
-  debug(message: string, meta?: Record<string, unknown>): void {
-    this.logger.debug(message, redactSensitiveDataAdvanced(meta));
-  }
-
-  // Audit logging methods
-  audit(entry: AuditLogEntry): void {
-    this.auditLogger.info('AUDIT', redactSensitiveDataAdvanced(entry));
-  }
-
-  // Security event logging
-  security(event: string, meta?: Record<string, unknown>): void {
-    this.securityLogger.warn(`SECURITY: ${event}`, redactSensitiveDataAdvanced(meta));
-  }
-
-  // Request/Response logging with redaction
-  logRequest(req: Request, res: Response, responseTime: number): void {
-    const auditEntry: AuditLogEntry = {
-      timestamp: new Date().toISOString(),
-      level: 'info',
-      message: `${req.method} ${req.path}`,
-      userId: (req as any).user?.id,
-      action: 'HTTP_REQUEST',
-      resource: req.path,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
-      success: res.statusCode < 400,
-      errorCode: res.statusCode >= 400 ? res.statusCode.toString() : undefined,
-      metadata: {
-        method: req.method,
-        path: req.path,
-        statusCode: res.statusCode,
-        responseTime,
-        query: redactSensitiveDataAdvanced(req.query),
-        body: redactSensitiveDataAdvanced(req.body),
-      },
-    };
-
-    this.audit(auditEntry);
-  }
-
-  // Authentication events
-  logAuthEvent(event: string, userId?: string, success: boolean, meta?: Record<string, unknown>): void {
-    const auditEntry: AuditLogEntry = {
-      timestamp: new Date().toISOString(),
-      level: success ? 'info' : 'warn',
-      message: `Authentication ${event}`,
-      userId,
-      action: 'AUTHENTICATION',
-      resource: 'auth',
-      success,
-      metadata: redactSensitiveDataAdvanced(meta),
-    };
-
-    this.audit(auditEntry);
-    
-    if (!success) {
-      this.security(`AUTH_FAILURE: ${event}`, { userId, ...meta });
-    }
-  }
-
-  // Wallet operations
-  logWalletOperation(operation: string, userId: string, success: boolean, meta?: Record<string, unknown>): void {
-    const auditEntry: AuditLogEntry = {
-      timestamp: new Date().toISOString(),
-      level: success ? 'info' : 'warn',
-      message: `Wallet ${operation}`,
-      userId,
-      action: 'WALLET_OPERATION',
-      resource: 'wallet',
-      success,
-      metadata: redactSensitiveDataAdvanced(meta),
-    };
-
-    this.audit(auditEntry);
-  }
-
-  // Payment operations
-  logPaymentOperation(operation: string, userId: string, success: boolean, meta?: Record<string, unknown>): void {
-    const auditEntry: AuditLogEntry = {
-      timestamp: new Date().toISOString(),
-      level: success ? 'info' : 'warn',
-      message: `Payment ${operation}`,
-      userId,
-      action: 'PAYMENT_OPERATION',
-      resource: 'payment',
-      success,
-      metadata: redactSensitiveDataAdvanced(meta),
-    };
-
-    this.audit(auditEntry);
-  }
-
-  // Security violations
-  logSecurityViolation(violation: string, meta?: Record<string, unknown>): void {
-    this.security(`VIOLATION: ${violation}`, meta);
-  }
-
-  // Rate limiting events
-  logRateLimit(ip: string, endpoint: string, meta?: Record<string, unknown>): void {
-    this.security('RATE_LIMIT_EXCEEDED', { ip, endpoint, ...meta });
-  }
-}
-
 // Create logs directory if it doesn't exist
 import { mkdirSync } from 'fs';
 try {
@@ -321,6 +193,6 @@ try {
   // Directory might already exist
 }
 
-// Export enhanced logger
-export const logger = new EnhancedLogger();
+// Export the basic logger with redaction
+export { logger };
 export default logger;

@@ -2,29 +2,100 @@
   "expo": {
     "name": "SatsConnect",
     "slug": "satsconnect",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "scheme": "satsconnect",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a1a"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.satsconnect.wallet",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SatsConnect needs camera access to scan QR codes for Bitcoin payments",
+        "NSFaceIDUsageDescription": "SatsConnect uses Face ID for secure authentication",
+        "NSMicrophoneUsageDescription": "SatsConnect may need microphone access for enhanced security features",
+        "NSLocationWhenInUseUsageDescription": "SatsConnect may use location for enhanced security features",
+        "UIBackgroundModes": ["background-fetch", "background-processing"]
+      },
+      "associatedDomains": [
+        "applinks:satsconnect.app",
+        "applinks:www.satsconnect.app"
+      ],
+      "entitlements": {
+        "com.apple.developer.associated-domains": true,
+        "keychain-access-groups": ["$(AppIdentifierPrefix)com.satsconnect.wallet"]
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a1a"
       },
-      "package": "com.satsconnect.wallet"
+      "package": "com.satsconnect.wallet",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "VIBRATE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "bitcoin"
+            },
+            {
+              "scheme": "lightning"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-camera",
+      "expo-local-authentication",
+      "expo-crypto",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "13.0"
+          },
+          "android": {
+            "minSdkVersion": 23,
+            "targetSdkVersion": 34,
+            "compileSdkVersion": 34
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    }
   }
 }

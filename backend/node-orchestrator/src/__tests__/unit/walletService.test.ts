@@ -36,7 +36,7 @@ describe('WalletService', () => {
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.createWallet({
         label: 'test-wallet',
@@ -63,7 +63,7 @@ describe('WalletService', () => {
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.createWallet({
         label: 'test-wallet-2',
@@ -82,13 +82,13 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           CreateWallet: jest.fn((request: unknown, callback: unknown) => {
-            callback(new Error('gRPC connection failed'), null);
+            (callback as (error: Error, response: null) => void)(new Error('gRPC connection failed'), null);
           }),
         },
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.createWallet({
         label: 'test-wallet',
@@ -105,7 +105,7 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           GetBalance: jest.fn((request: unknown, callback: unknown) => {
-            (callback as (error: null, response: { node_id: string; address: string }) => void)(null, {
+            (callback as (error: null, response: unknown) => void)(null, {
               confirmed_sats: 1000000,
               lightning_sats: 500000,
             });
@@ -114,7 +114,7 @@ describe('WalletService', () => {
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.getBalance();
 
@@ -129,13 +129,13 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           GetBalance: jest.fn((request: unknown, callback: unknown) => {
-            callback(new Error('Service unavailable'), null);
+            (callback as (error: Error, response: null) => void)(new Error('Service unavailable'), null);
           }),
         },
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.getBalance();
 
@@ -149,7 +149,7 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           NewInvoice: jest.fn((request: unknown, callback: unknown) => {
-            (callback as (error: null, response: { node_id: string; address: string }) => void)(null, {
+            (callback as (error: null, response: unknown) => void)(null, {
               invoice: 'lnbc1000u1p3k2v5cpp5test',
               payment_hash: 'test_payment_hash_123',
             });
@@ -158,7 +158,7 @@ describe('WalletService', () => {
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.newInvoice({
         amount_sats: 1000,
@@ -176,13 +176,13 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           NewInvoice: jest.fn((request: unknown, callback: unknown) => {
-            callback(new Error('Invalid amount'), null);
+            (callback as (error: Error, response: null) => void)(new Error('Invalid amount'), null);
           }),
         },
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.newInvoice({
         amount_sats: -100,
@@ -199,7 +199,7 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           SendPayment: jest.fn((request: unknown, callback: unknown) => {
-            (callback as (error: null, response: { node_id: string; address: string }) => void)(null, {
+            (callback as (error: null, response: unknown) => void)(null, {
               payment_hash: 'sent_payment_hash_123',
               status: 'SUCCEEDED',
             });
@@ -208,7 +208,7 @@ describe('WalletService', () => {
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.sendPayment({
         invoice: 'lnbc1000u1p3k2v5cpp5test',
@@ -225,13 +225,13 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           SendPayment: jest.fn((request: unknown, callback: unknown) => {
-            callback(new Error('Insufficient funds'), null);
+            (callback as (error: Error, response: null) => void)(new Error('Insufficient funds'), null);
           }),
         },
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.sendPayment({
         invoice: 'lnbc1000u1p3k2v5cpp5test',
@@ -247,7 +247,7 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           BuyAirtime: jest.fn((request: unknown, callback: unknown) => {
-            (callback as (error: null, response: { node_id: string; address: string }) => void)(null, {
+            (callback as (error: null, response: unknown) => void)(null, {
               invoice: 'lnbc500u1p3k2v5cpp5airtime',
               payment_hash: 'airtime_payment_hash_123',
               status: 'PENDING',
@@ -257,7 +257,7 @@ describe('WalletService', () => {
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.buyAirtime({
         amount_sats: 500,
@@ -277,13 +277,13 @@ describe('WalletService', () => {
       const mockClients = {
         walletClient: {
           BuyAirtime: jest.fn((request: unknown, callback: unknown) => {
-            callback(new Error('Invalid phone number'), null);
+            (callback as (error: Error, response: null) => void)(new Error('Invalid phone number'), null);
           }),
         },
         paymentClient: {},
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
 
       const result = await walletService.buyAirtime({
         amount_sats: 500,

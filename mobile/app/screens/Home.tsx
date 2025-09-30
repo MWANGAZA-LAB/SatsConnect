@@ -27,6 +27,12 @@ export default function Home() {
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
+  const [selectedCurrency, setSelectedCurrency] = useState<'BTC' | 'KES' | 'USD'>('BTC');
+  const [exchangeRates, setExchangeRates] = useState({
+    BTC: 1,
+    KES: 4000000, // Mock rate: 1 BTC = 4M KES
+    USD: 40000,   // Mock rate: 1 BTC = 40K USD
+  });
 
   useFocusEffect(
     React.useCallback(() => {
@@ -56,11 +62,36 @@ export default function Home() {
     }
   };
 
-  const formatKES = (sats: number) => {
-    // Mock conversion rate: 1 BTC = 4,000,000 KES
+  const formatCurrency = (sats: number, currency: 'BTC' | 'KES' | 'USD') => {
     const btc = sats / 100000000;
-    const kes = btc * 4000000;
-    return `≈ ${kes.toFixed(0)} KES`;
+    
+    switch (currency) {
+      case 'BTC':
+        if (sats >= 100000000) {
+          return `${btc.toFixed(8)} BTC`;
+        } else if (sats >= 1000) {
+          return `${(sats / 1000).toFixed(1)}K sats`;
+        } else {
+          return `${sats} sats`;
+        }
+      case 'KES':
+        const kes = btc * exchangeRates.KES;
+        return `≈ ${kes.toLocaleString('en-KE')} KES`;
+      case 'USD':
+        const usd = btc * exchangeRates.USD;
+        return `≈ $${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      default:
+        return formatSats(sats);
+    }
+  };
+
+  const getCurrencySymbol = (currency: 'BTC' | 'KES' | 'USD') => {
+    switch (currency) {
+      case 'BTC': return '₿';
+      case 'KES': return 'KSh';
+      case 'USD': return '$';
+      default: return '';
+    }
   };
 
   const handleSend = () => {
@@ -152,31 +183,67 @@ export default function Home() {
         <Card style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
-            <TouchableOpacity onPress={toggleBalanceVisibility}>
-              <Text style={styles.toggleText}>{showBalance ? '👁️' : '🙈'}</Text>
-            </TouchableOpacity>
+            <View style={styles.balanceControls}>
+              <View style={styles.currencySelector}>
+                {(['BTC', 'KES', 'USD'] as const).map((currency) => (
+                  <TouchableOpacity
+                    key={currency}
+                    style={[
+                      styles.currencyButton,
+                      selectedCurrency === currency && styles.currencyButtonActive
+                    ]}
+                    onPress={() => setSelectedCurrency(currency)}
+                  >
+                    <Text style={[
+                      styles.currencyButtonText,
+                      selectedCurrency === currency && styles.currencyButtonTextActive
+                    ]}>
+                      {getCurrencySymbol(currency)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity onPress={toggleBalanceVisibility} style={styles.visibilityButton}>
+                <Text style={styles.toggleText}>{showBalance ? '👁️' : '🙈'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {showBalance ? (
             <>
               <Text style={styles.balanceAmount}>
-                {formatSats(walletState.balance.totalSats)}
+                {formatCurrency(walletState.balance.totalSats, selectedCurrency)}
               </Text>
-              <Text style={styles.balanceKES}>
-                {formatKES(walletState.balance.totalSats)}
-              </Text>
+              
+              {/* Show other currencies as secondary info */}
+              {selectedCurrency !== 'BTC' && (
+                <Text style={styles.balanceSecondary}>
+                  {formatSats(walletState.balance.totalSats)}
+                </Text>
+              )}
+              
+              {selectedCurrency === 'BTC' && (
+                <View style={styles.currencyEquivalents}>
+                  <Text style={styles.currencyEquivalent}>
+                    {formatCurrency(walletState.balance.totalSats, 'KES')}
+                  </Text>
+                  <Text style={styles.currencyEquivalent}>
+                    {formatCurrency(walletState.balance.totalSats, 'USD')}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.balanceBreakdown}>
                 <View style={styles.balanceItem}>
                   <Text style={styles.balanceItemLabel}>On-chain</Text>
                   <Text style={styles.balanceItemValue}>
-                    {formatSats(walletState.balance.confirmedSats)}
+                    {formatCurrency(walletState.balance.confirmedSats, selectedCurrency)}
                   </Text>
                 </View>
                 <View style={styles.balanceItem}>
                   <Text style={styles.balanceItemLabel}>Lightning</Text>
                   <Text style={styles.balanceItemValue}>
-                    {formatSats(walletState.balance.lightningSats)}
+                    {formatCurrency(walletState.balance.lightningSats, selectedCurrency)}
                   </Text>
                 </View>
               </View>
@@ -358,6 +425,36 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: theme.spacing.md,
   },
+  balanceControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  currencySelector: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.gray100,
+    borderRadius: theme.spacing.sm,
+    padding: 2,
+  },
+  currencyButton: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.spacing.xs,
+  },
+  currencyButtonActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  currencyButtonText: {
+    ...theme.typography.textStyles.caption,
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  currencyButtonTextActive: {
+    color: theme.colors.white,
+  },
+  visibilityButton: {
+    padding: theme.spacing.xs,
+  },
   balanceLabel: {
     ...theme.typography.textStyles.body1,
     color: theme.colors.textSecondary,
@@ -370,10 +467,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
-  balanceKES: {
-    ...theme.typography.textStyles.h5,
+  balanceSecondary: {
+    ...theme.typography.textStyles.h6,
     color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  currencyEquivalents: {
+    flexDirection: 'row',
+    gap: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
+  },
+  currencyEquivalent: {
+    ...theme.typography.textStyles.body2,
+    color: theme.colors.textSecondary,
   },
   hiddenBalance: {
     ...theme.typography.textStyles.h1,

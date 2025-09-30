@@ -1,39 +1,49 @@
 version: '3.8'
 
 services:
-  # Redis for queue management
+  # Redis for caching and queue management
   redis:
     image: redis:7-alpine
     container_name: satsconnect-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-satsconnect_redis_password}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - satsconnect-network
 
-  # Rust Lightning Engine
+  # Rust gRPC Engine
   rust-engine:
     build:
       context: ./backend/rust-engine
       dockerfile: Dockerfile
     container_name: satsconnect-rust-engine
+    restart: unless-stopped
     ports:
       - "50051:50051"
-    volumes:
-      - rust_data:/app/data
     environment:
       - RUST_LOG=info
+      - GRPC_PORT=50051
+      - DATA_DIR=/app/data
+    volumes:
+      - rust_engine_data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+      test: ["CMD", "netstat", "-an", "|", "grep", ":50051"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
+    networks:
+      - satsconnect-network
 
   # Node.js Orchestrator
   node-orchestrator:
@@ -41,67 +51,65 @@ services:
       context: ./backend/node-orchestrator
       dockerfile: Dockerfile
     container_name: satsconnect-orchestrator
+    restart: unless-stopped
     ports:
       - "4000:4000"
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - GRPC_ENGINE_URL=rust-engine:50051
-      - REDIS_URL=redis://redis:6379
+      - RUST_ENGINE_GRPC_URL=rust-engine:50051
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-satsconnect_redis_password}@redis:6379
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
-      - JWT_EXPIRES_IN=24h
-      - LOG_LEVEL=info
-      - RATE_LIMIT_WINDOW_MS=900000
-      - RATE_LIMIT_MAX_REQUESTS=100
-      - CORS_ORIGIN=*
-      - BCRYPT_ROUNDS=12
-      # MPesa Configuration
       - MPESA_CONSUMER_KEY=${MPESA_CONSUMER_KEY}
       - MPESA_CONSUMER_SECRET=${MPESA_CONSUMER_SECRET}
-      - MPESA_BUSINESS_SHORT_CODE=${MPESA_BUSINESS_SHORT_CODE:-174379}
+      - MPESA_SHORTCODE=${MPESA_SHORTCODE}
       - MPESA_PASSKEY=${MPESA_PASSKEY}
-      - MPESA_CALLBACK_URL=${MPESA_CALLBACK_URL}
-      - MPESA_ENVIRONMENT=${MPESA_ENVIRONMENT:-sandbox}
-      # Airtime Configuration
-      - AIRTIME_PROVIDER=${AIRTIME_PROVIDER:-chimoney}
-      - CHIMONEY_API_KEY=${CHIMONEY_API_KEY}
-      - CHIMONEY_SUB_KEY=${CHIMONEY_SUB_KEY}
-      - CHIMONEY_WEBHOOK_URL=${CHIMONEY_WEBHOOK_URL}
-      # Queue Configuration
-      - QUEUE_CONCURRENCY=5
-      - QUEUE_RETRY_ATTEMPTS=3
+      - AIRTIME_API_KEY=${AIRTIME_API_KEY}
+      - AIRTIME_API_SECRET=${AIRTIME_API_SECRET}
+    volumes:
+      - orchestrator_logs:/app/logs
+      - ./backend/node-orchestrator/.env.encrypted:/app/.env.encrypted:ro
+      - ./backend/node-orchestrator/.config.key:/app/.config.key:ro
     depends_on:
       redis:
         condition: service_healthy
       rust-engine:
         condition: service_healthy
-    volumes:
-      - orchestrator_logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
+    networks:
+      - satsconnect-network
 
-  # Nginx Reverse Proxy
+  # Nginx reverse proxy
   nginx:
     image: nginx:alpine
     container_name: satsconnect-nginx
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
     depends_on:
       - node-orchestrator
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - satsconnect-network
 
   # Monitoring with Prometheus
   prometheus:
     image: prom/prometheus:latest
     container_name: satsconnect-prometheus
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -114,29 +122,90 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
-    restart: unless-stopped
+    networks:
+      - satsconnect-network
 
-  # Grafana for visualization
+  # Monitoring with Grafana
   grafana:
     image: grafana/grafana:latest
     container_name: satsconnect-grafana
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - satsconnect-network
+
+  # Log aggregation with ELK Stack (optional)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: satsconnect-elasticsearch
     restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - satsconnect-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: satsconnect-logstash
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - orchestrator_logs:/var/log/orchestrator:ro
+    ports:
+      - "5044:5044"
+    depends_on:
+      - elasticsearch
+    networks:
+      - satsconnect-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: satsconnect-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - satsconnect-network
 
 volumes:
   redis_data:
-  rust_data:
+    driver: local
+  rust_engine_data:
+    driver: local
   orchestrator_logs:
+    driver: local
+  nginx_logs:
+    driver: local
   prometheus_data:
+    driver: local
   grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
 
 networks:
-  default:
-    name: satsconnect-network
+  satsconnect-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

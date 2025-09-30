@@ -52,7 +52,7 @@ router.post(
       });
 
       // Validate callback signature
-      if (!mpesaService.validateCallback(callback, signature)) {
+      if (!mpesaService.validateCallback(callback as any, signature)) {
         logger.warn('Invalid MPesa callback signature');
         return res.status(400).json({
           success: false,
@@ -61,7 +61,7 @@ router.post(
       }
 
       // Extract transaction details
-      const transactionDetails = mpesaService.extractTransactionDetails(callback);
+      const transactionDetails = mpesaService.extractTransactionDetails(callback as any);
 
       logger.info('MPesa transaction details:', transactionDetails);
 
@@ -148,7 +148,7 @@ router.post(
       });
 
       // Validate callback signature
-      if (!airtimeService.validateCallback(callback, signature)) {
+      if (!airtimeService.validateCallback(callback as any, signature)) {
         logger.warn('Invalid airtime callback signature');
         return res.status(400).json({
           success: false,
@@ -227,7 +227,7 @@ router.post('/mpesa/payout', async (req: express.Request, res: express.Response)
     });
 
     // Validate callback signature
-    if (!mpesaService.validateCallback(callback, signature)) {
+    if (!mpesaService.validateCallback(callback as any, signature)) {
       logger.warn('Invalid MPesa payout callback signature');
       return res.status(400).json({
         success: false,
@@ -240,8 +240,8 @@ router.post('/mpesa/payout', async (req: express.Request, res: express.Response)
       logger.info('MPesa payout successful:', {
         originatorConversationID: callback.OriginatorConversationID,
         conversationID: callback.ConversationID,
-        amount: callback.ResultParameters?.ResultParameter?.[0]?.Value,
-        phoneNumber: callback.ResultParameters?.ResultParameter?.[1]?.Value,
+        amount: (callback as any).ResultParameters?.ResultParameter?.[0]?.Value,
+        phoneNumber: (callback as any).ResultParameters?.ResultParameter?.[1]?.Value,
       });
 
       // TODO: Process successful payout

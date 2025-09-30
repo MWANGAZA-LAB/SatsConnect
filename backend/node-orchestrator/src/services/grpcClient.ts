@@ -19,16 +19,16 @@ const packageDefinition = protoLoader.loadSync(
 
 const protoDefinition = grpc.loadPackageDefinition(packageDefinition) as {
   satsconnect: {
-    wallet: { v1: unknown };
-    payment: { v1: unknown };
+    wallet: { v1: any };
+    payment: { v1: any };
   };
 };
 const walletProto = protoDefinition.satsconnect.wallet.v1;
 const paymentProto = protoDefinition.satsconnect.payment.v1;
 
 export interface GrpcClients {
-  walletClient: unknown;
-  paymentClient: unknown;
+  walletClient: any;
+  paymentClient: any;
 }
 
 class GrpcClientService {

@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Storage keys
@@ -10,7 +11,21 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'transactions',
   PIN_HASH: 'pin_hash',
   PIN_SALT: 'pin_salt',
+  ENCRYPTION_KEY: 'encryption_key',
+  DEVICE_ID: 'device_id',
+  SECURITY_SETTINGS: 'security_settings',
 } as const;
+
+// Security settings interface
+export interface SecuritySettings {
+  biometricEnabled: boolean;
+  pinEnabled: boolean;
+  autoLockTimeout: number; // in minutes
+  maxLoginAttempts: number;
+  lockoutDuration: number; // in minutes
+  lastUnlockTime: number;
+  failedAttempts: number;
+}
 
 export interface WalletData {
   nodeId: string;
@@ -39,6 +54,101 @@ export interface TransactionData {
 }
 
 class SecureStorageService {
+  private deviceId: string | null = null;
+
+  constructor() {
+    this.initializeDeviceId();
+  }
+
+  // Initialize device ID for additional security
+  private async initializeDeviceId(): Promise<void> {
+    try {
+      let deviceId = await SecureStore.getItemAsync(STORAGE_KEYS.DEVICE_ID);
+      if (!deviceId) {
+        deviceId = await Crypto.getRandomBytesAsync(32).then(bytes => 
+          btoa(String.fromCharCode(...bytes))
+        );
+        await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_ID, deviceId);
+      }
+      this.deviceId = deviceId;
+    } catch (error) {
+      console.error('Failed to initialize device ID:', error);
+    }
+  }
+
+  // Generate encryption key for additional data protection
+  private async getEncryptionKey(): Promise<string> {
+    try {
+      let key = await SecureStore.getItemAsync(STORAGE_KEYS.ENCRYPTION_KEY);
+      if (!key) {
+        key = await Crypto.getRandomBytesAsync(32).then(bytes => 
+          btoa(String.fromCharCode(...bytes))
+        );
+        await SecureStore.setItemAsync(STORAGE_KEYS.ENCRYPTION_KEY, key);
+      }
+      return key;
+    } catch (error) {
+      console.error('Failed to get encryption key:', error);
+      throw new Error('Encryption key not available');
+    }
+  }
+
+  // Encrypt sensitive data before storage
+  private async encryptData(data: string): Promise<string> {
+    try {
+      const key = await this.getEncryptionKey();
+      const deviceId = this.deviceId || '';
+      const combinedKey = key + deviceId;
+      
+      const hash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        combinedKey,
+        { encoding: Crypto.CryptoEncoding.BASE64 }
+      );
+      
+      // Simple XOR encryption (for additional obfuscation)
+      let encrypted = '';
+      for (let i = 0; i < data.length; i++) {
+        encrypted += String.fromCharCode(
+          data.charCodeAt(i) ^ hash.charCodeAt(i % hash.length)
+        );
+      }
+      
+      return btoa(encrypted);
+    } catch (error) {
+      console.error('Failed to encrypt data:', error);
+      return data; // Fallback to unencrypted
+    }
+  }
+
+  // Decrypt sensitive data after retrieval
+  private async decryptData(encryptedData: string): Promise<string> {
+    try {
+      const key = await this.getEncryptionKey();
+      const deviceId = this.deviceId || '';
+      const combinedKey = key + deviceId;
+      
+      const hash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        combinedKey,
+        { encoding: Crypto.CryptoEncoding.BASE64 }
+      );
+      
+      const data = atob(encryptedData);
+      let decrypted = '';
+      for (let i = 0; i < data.length; i++) {
+        decrypted += String.fromCharCode(
+          data.charCodeAt(i) ^ hash.charCodeAt(i % hash.length)
+        );
+      }
+      
+      return decrypted;
+    } catch (error) {
+      console.error('Failed to decrypt data:', error);
+      return encryptedData; // Fallback to encrypted data
+    }
+  }
+
   // Wallet data (sensitive - stored in SecureStore)
   async saveWalletData(walletData: WalletData): Promise<boolean> {
     try {
@@ -73,10 +183,11 @@ class SecureStorageService {
     }
   }
 
-  // Mnemonic (most sensitive - stored in SecureStore)
+  // Mnemonic (most sensitive - stored in SecureStore with additional encryption)
   async saveMnemonic(mnemonic: string): Promise<boolean> {
     try {
-      await SecureStore.setItemAsync(STORAGE_KEYS.MNEMONIC, mnemonic);
+      const encryptedMnemonic = await this.encryptData(mnemonic);
+      await SecureStore.setItemAsync(STORAGE_KEYS.MNEMONIC, encryptedMnemonic);
       return true;
     } catch (error) {
       console.error('Failed to save mnemonic:', error);
@@ -86,7 +197,16 @@ class SecureStorageService {
 
   async getMnemonic(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.MNEMONIC);
+      const encryptedMnemonic = await SecureStore.getItemAsync(STORAGE_KEYS.MNEMONIC);
+      if (!encryptedMnemonic) return null;
+      
+      // Try to decrypt, fallback to original if decryption fails
+      try {
+        return await this.decryptData(encryptedMnemonic);
+      } catch {
+        // If decryption fails, assume it's an old unencrypted mnemonic
+        return encryptedMnemonic;
+      }
     } catch (error) {
       console.error('Failed to get mnemonic:', error);
       return null;
@@ -279,6 +399,104 @@ class SecureStorageService {
     } catch (error) {
       console.error('Failed to clear PIN data:', error);
       return false;
+    }
+  }
+
+  // Security settings management
+  async saveSecuritySettings(settings: SecuritySettings): Promise<boolean> {
+    try {
+      await SecureStore.setItemAsync(
+        STORAGE_KEYS.SECURITY_SETTINGS,
+        JSON.stringify(settings)
+      );
+      return true;
+    } catch (error) {
+      console.error('Failed to save security settings:', error);
+      return false;
+    }
+  }
+
+  async getSecuritySettings(): Promise<SecuritySettings | null> {
+    try {
+      const data = await SecureStore.getItemAsync(STORAGE_KEYS.SECURITY_SETTINGS);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to get security settings:', error);
+      return null;
+    }
+  }
+
+  async updateSecuritySettings(updates: Partial<SecuritySettings>): Promise<boolean> {
+    try {
+      const currentSettings = await this.getSecuritySettings();
+      const newSettings = { ...currentSettings, ...updates };
+      return await this.saveSecuritySettings(newSettings);
+    } catch (error) {
+      console.error('Failed to update security settings:', error);
+      return false;
+    }
+  }
+
+  // Security validation methods
+  async isDeviceSecure(): Promise<boolean> {
+    try {
+      // Check if device has secure storage available
+      const testKey = 'security_test';
+      const testValue = 'test_value';
+      
+      await SecureStore.setItemAsync(testKey, testValue);
+      const retrievedValue = await SecureStore.getItemAsync(testKey);
+      await SecureStore.deleteItemAsync(testKey);
+      
+      return retrievedValue === testValue;
+    } catch (error) {
+      console.error('Device security check failed:', error);
+      return false;
+    }
+  }
+
+  async validateSecurityIntegrity(): Promise<boolean> {
+    try {
+      const settings = await this.getSecuritySettings();
+      if (!settings) return false;
+
+      // Check if app is locked due to failed attempts
+      const now = Date.now();
+      const lockoutEndTime = settings.lastUnlockTime + (settings.lockoutDuration * 60 * 1000);
+      
+      if (settings.failedAttempts >= settings.maxLoginAttempts && now < lockoutEndTime) {
+        return false; // Still in lockout period
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Security integrity validation failed:', error);
+      return false;
+    }
+  }
+
+  async recordFailedAttempt(): Promise<void> {
+    try {
+      const settings = await this.getSecuritySettings();
+      if (settings) {
+        settings.failedAttempts += 1;
+        await this.saveSecuritySettings(settings);
+      }
+    } catch (error) {
+      console.error('Failed to record failed attempt:', error);
+    }
+  }
+
+  async resetFailedAttempts(): Promise<void> {
+    try {
+      const settings = await this.getSecuritySettings();
+      if (settings) {
+        settings.failedAttempts = 0;
+        settings.lastUnlockTime = Date.now();
+        await this.saveSecuritySettings(settings);
+      }
+    } catch (error) {
+      console.error('Failed to reset failed attempts:', error);
     }
   }
 

@@ -7,7 +7,7 @@ import { body, validationResult } from 'express-validator';
 
 // General rate limiting middleware
 export const createRateLimit = () => {
-  return rateLimit({
+  const rateLimiter = rateLimit({
     windowMs: config.rateLimit.windowMs,
     max: config.rateLimit.maxRequests,
     message: {
@@ -16,7 +16,7 @@ export const createRateLimit = () => {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req: Request, res: Response) => {
+    handler: (req: any, res: any) => {
       logger.warn('Rate limit exceeded', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
@@ -28,11 +28,13 @@ export const createRateLimit = () => {
       });
     },
   });
+  
+  return rateLimiter as any;
 };
 
 // Strict rate limiting for sensitive endpoints (payments, airtime, payouts)
 export const createStrictRateLimit = () => {
-  return rateLimit({
+  const rateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10, // Only 10 requests per 15 minutes
     message: {
@@ -41,7 +43,7 @@ export const createStrictRateLimit = () => {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req: Request, res: Response) => {
+    handler: (req: any, res: any) => {
       logger.warn('Strict rate limit exceeded for sensitive endpoint', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
@@ -54,11 +56,13 @@ export const createStrictRateLimit = () => {
       });
     },
   });
+  
+  return rateLimiter as any;
 };
 
 // Very strict rate limiting for authentication endpoints
 export const createAuthRateLimit = () => {
-  return rateLimit({
+  const rateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // Only 5 auth attempts per 15 minutes
     message: {
@@ -67,7 +71,7 @@ export const createAuthRateLimit = () => {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req: Request, res: Response) => {
+    handler: (req: any, res: any) => {
       logger.warn('Auth rate limit exceeded', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
@@ -80,6 +84,8 @@ export const createAuthRateLimit = () => {
       });
     },
   });
+  
+  return rateLimiter as any;
 };
 
 // Security headers middleware

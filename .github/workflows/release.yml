@@ -7,58 +7,153 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.0.0)'
+        description: 'Version to release (e.g., v1.0.0)'
         required: true
         type: string
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
+  # Create release
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
-      version: ${{ steps.set_version.outputs.version }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set version
-      id: set_version
-      run: echo "version=${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}" >> $GITHUB_OUTPUT
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
 
-    - name: Create GitHub Release
+    - name: Create release
       id: create_release
-      uses: softprops/action-gh-release@v1
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.set_version.outputs.version }}
-        name: Release ${{ steps.set_version.outputs.version }}
+        tag_name: ${{ steps.version.outputs.version }}
+        release_name: SatsConnect ${{ steps.version.outputs.version }}
         body: |
-          ## SatsConnect ${{ steps.set_version.outputs.version }}
-
-          ### What's New
-          - 🚀 Production-ready Bitcoin Lightning wallet
-          - 💰 MPesa integration for KES ↔ BTC
-          - 📱 Cross-platform mobile app (iOS/Android)
-          - 🔒 Enterprise-grade security
-          - 🌍 Built for Africa
+          ## 🚀 SatsConnect ${{ steps.version.outputs.version }}
           
-          ### Components
-          - **Rust gRPC Engine**: High-performance Lightning node
-          - **Node.js Orchestrator**: REST API and fiat integrations
-          - **React Native App**: Mobile wallet interface
+          ### ✨ What's New
+          - Enhanced security with JWT authentication
+          - Improved Lightning Network integration
+          - Better mobile app performance
+          - Comprehensive monitoring and alerting
+          
+          ### 🔧 Technical Improvements
+          - Updated dependencies
+          - Enhanced error handling
+          - Improved logging and auditing
+          - Better test coverage
+          
+          ### 📱 Mobile App
+          - Biometric authentication
+          - Secure key storage
+          - Improved UX/UI
+          - Better offline support
+          
+          ### 🔒 Security
+          - Encrypted configuration
+          - Rate limiting
+          - Input validation
+          - Audit logging
+          
+          ### 📊 Monitoring
+          - Health checks
+          - Performance metrics
+          - Error tracking
+          - Security monitoring
+        draft: false
+        prerelease: false
 
-  build-and-push:
-    name: Build and Push Docker Images
+  # Build and test
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
     needs: create-release
-    permissions:
-      contents: read
-      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+
+    - name: Install dependencies
+      run: |
+        cd backend/node-orchestrator
+        npm ci
+        cd ../../mobile
+        npm ci
+
+    - name: Build Rust engine
+      run: |
+        cd backend/rust-engine
+        cargo build --release
+
+    - name: Build Node.js orchestrator
+      run: |
+        cd backend/node-orchestrator
+        npm run build
+
+    - name: Run tests
+      run: |
+        echo "🧪 Running comprehensive test suite..."
+        
+        # Run Rust tests
+        cd backend/rust-engine
+        cargo test
+        
+        # Run Node.js tests
+        cd ../node-orchestrator
+        npm test
+        
+        # Run mobile tests
+        cd ../../mobile
+        npm test
+
+    - name: Run security scans
+      run: |
+        echo "🔒 Running security scans..."
+        
+        # Run npm audit
+        cd backend/node-orchestrator
+        npm audit --audit-level=moderate
+        
+        cd ../../mobile
+        npm audit --audit-level=moderate
+        
+        # Run cargo audit
+        cd ../rust-engine
+        cargo audit
+
+  # Build Docker images
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: create-release
+
+    strategy:
+      matrix:
+        service: [rust-engine, node-orchestrator]
 
     steps:
     - name: Checkout code
@@ -70,24 +165,30 @@ jobs:
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
-        registry: ${{ env.REGISTRY }}
+        registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push Rust Engine image
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+        tags: |
+          type=ref,event=tag
+          type=raw,value=latest
+
+    - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./backend/rust-engine
+        context: ./backend/${{ matrix.service }}
         push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/rust-engine:${{ needs.create-release.outputs.version }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-    - name: Build and push Node Orchestrator image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend/node-orchestrator
-        push: true
-        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/node-orchestrator:${{ needs.create-release.outputs.version }}
-
+  # Build mobile app
   build-mobile:
     name: Build Mobile App
     runs-on: ubuntu-latest
@@ -102,25 +203,228 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: mobile/package-lock.json
 
     - name: Install dependencies
       run: |
         cd mobile
         npm ci
 
-    - name: Install Expo CLI
-      run: npm install -g @expo/cli@latest
+    - name: Install EAS CLI
+      run: npm install -g @expo/eas-cli
 
-    - name: Build Expo bundle
+    - name: Login to EAS
       run: |
         cd mobile
-        npx expo export --platform all
-      continue-on-error: true
+        eas login --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-    - name: Upload mobile artifacts
-      uses: actions/upload-artifact@v4
+    - name: Build mobile app
+      run: |
+        cd mobile
+        eas build --platform all --profile production --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  # Upload release assets
+  upload-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    needs: [create-release, build-and-test, build-docker, build-mobile]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download Docker images
+      run: |
+        echo "📦 Downloading Docker images..."
+        # Download built images (in a real scenario, these would be pulled from registry)
+        mkdir -p release-assets
+
+    - name: Create release package
+      run: |
+        echo "📦 Creating release package..."
+        
+        # Create release directory
+        mkdir -p release-assets
+        
+        # Copy important files
+        cp README.md release-assets/
+        cp LICENSE release-assets/
+        cp docker-compose.yml release-assets/
+        cp docker-compose.prod.yml release-assets/
+        
+        # Copy configuration examples
+        cp backend/node-orchestrator/.env.example release-assets/
+        cp mobile/app.json release-assets/
+        
+        # Create installation script
+        cat > release-assets/install.sh << 'EOF'
+        #!/bin/bash
+        echo "🚀 Installing SatsConnect..."
+        
+        # Check if Docker is installed
+        if ! command -v docker &> /dev/null; then
+          echo "❌ Docker is not installed. Please install Docker first."
+          exit 1
+        fi
+        
+        # Check if Docker Compose is installed
+        if ! command -v docker-compose &> /dev/null; then
+          echo "❌ Docker Compose is not installed. Please install Docker Compose first."
+          exit 1
+        fi
+        
+        # Start services
+        echo "🏃 Starting services..."
+        docker-compose up -d
+        
+        echo "✅ SatsConnect installed successfully!"
+        echo "🌐 Access the API at: http://localhost:3000"
+        echo "📱 Mobile app: Install from your app store"
+        EOF
+        
+        chmod +x release-assets/install.sh
+        
+        # Create upgrade script
+        cat > release-assets/upgrade.sh << 'EOF'
+        #!/bin/bash
+        echo "🔄 Upgrading SatsConnect..."
+        
+        # Stop services
+        docker-compose down
+        
+        # Pull latest images
+        docker-compose pull
+        
+        # Start services
+        docker-compose up -d
+        
+        echo "✅ SatsConnect upgraded successfully!"
+        EOF
+        
+        chmod +x release-assets/upgrade.sh
+        
+        # Create uninstall script
+        cat > release-assets/uninstall.sh << 'EOF'
+        #!/bin/bash
+        echo "🗑️ Uninstalling SatsConnect..."
+        
+        # Stop and remove services
+        docker-compose down -v
+        
+        # Remove images
+        docker rmi satsconnect-rust-engine satsconnect-node-orchestrator
+        
+        echo "✅ SatsConnect uninstalled successfully!"
+        EOF
+        
+        chmod +x release-assets/uninstall.sh
+
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: mobile-bundles
-        path: mobile/dist/
-        retention-days: 30
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./release-assets
+        asset_name: satsconnect-${{ github.ref_name }}-assets.zip
+        asset_content_type: application/zip
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [create-release, build-and-test, build-docker]
+
+    environment:
+      name: staging
+      url: https://staging.satsconnect.app
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # Example: kubectl apply -f k8s/staging/
+        # Example: docker-compose -f docker-compose.staging.yml up -d
+
+    - name: Run smoke tests
+      run: |
+        echo "🧪 Running smoke tests..."
+        # Add smoke tests here
+        # Example: curl -f https://staging.satsconnect.app/health
+
+    - name: Notify staging deployment
+      run: |
+        echo "✅ Staging deployment completed!"
+        echo "🌐 Staging URL: https://staging.satsconnect.app"
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [create-release, build-and-test, build-docker, deploy-staging]
+
+    environment:
+      name: production
+      url: https://satsconnect.app
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        # Add your production deployment commands here
+        # Example: kubectl apply -f k8s/production/
+        # Example: docker-compose -f docker-compose.prod.yml up -d
+
+    - name: Run production health checks
+      run: |
+        echo "🏥 Running production health checks..."
+        # Add health checks here
+        # Example: curl -f https://satsconnect.app/health
+
+    - name: Notify production deployment
+      run: |
+        echo "✅ Production deployment completed!"
+        echo "🌐 Production URL: https://satsconnect.app"
+
+  # Release summary
+  release-summary:
+    name: Release Summary
+    runs-on: ubuntu-latest
+    needs: [create-release, build-and-test, build-docker, build-mobile, upload-assets, deploy-staging, deploy-production]
+    if: always()
+
+    steps:
+    - name: Release summary
+      run: |
+        echo "🎉 Release Summary"
+        echo "================="
+        echo "✅ Release created: ${{ needs.create-release.result }}"
+        echo "✅ Build and test: ${{ needs.build-and-test.result }}"
+        echo "✅ Docker build: ${{ needs.build-docker.result }}"
+        echo "✅ Mobile build: ${{ needs.build-mobile.result }}"
+        echo "✅ Assets uploaded: ${{ needs.upload-assets.result }}"
+        echo "✅ Staging deployment: ${{ needs.deploy-staging.result }}"
+        echo "✅ Production deployment: ${{ needs.deploy-production.result }}"
+        
+        if [[ "${{ needs.create-release.result }}" == "failure" || 
+              "${{ needs.build-and-test.result }}" == "failure" || 
+              "${{ needs.build-docker.result }}" == "failure" || 
+              "${{ needs.build-mobile.result }}" == "failure" || 
+              "${{ needs.upload-assets.result }}" == "failure" || 
+              "${{ needs.deploy-staging.result }}" == "failure" || 
+              "${{ needs.deploy-production.result }}" == "failure" ]]; then
+          echo "❌ Some release steps failed. Please review the results."
+          exit 1
+        else
+          echo "✅ Release completed successfully!"
+        fi

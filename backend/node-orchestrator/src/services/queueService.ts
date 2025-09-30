@@ -243,7 +243,7 @@ class QueueService {
       const airtimeResponse = await airtimeService.buyAirtime({
         phoneNumber,
         amount,
-        provider: provider as string,
+        provider: provider as 'safaricom' | 'airtel' | 'telkom',
         reference,
       });
 

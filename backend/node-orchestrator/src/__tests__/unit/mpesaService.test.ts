@@ -13,7 +13,7 @@ const mockAxiosInstance = {
   post: jest.fn(),
 };
 
-mockedAxios.create.mockReturnValue(mockAxiosInstance as unknown);
+  mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
 
 // Mock config
 jest.mock('../../config', () => ({
@@ -93,8 +93,8 @@ describe('MpesaService', () => {
 
     const result = await mpesaService.queryStkPushStatus('ws_CO_123456789');
 
-    expect(result.ResponseCode).toBe('0');
-    expect(result.ResultCode).toBe('0');
+    expect((result as any).ResponseCode).toBe('0');
+    expect((result as any).ResultCode).toBe('0');
     expect(mockAxiosInstance.post).toHaveBeenCalledWith(
       '/mpesa/stkpushquery/v1/query',
       expect.any(Object)

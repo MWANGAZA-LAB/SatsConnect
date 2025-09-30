@@ -249,11 +249,11 @@ router.get(
         success: true,
         data: {
           transactionId,
-          status: jobStatus.state,
-          progress: jobStatus.progress,
-          data: jobStatus.data,
-          failedReason: jobStatus.failedReason,
-          returnValue: jobStatus.returnvalue,
+          status: (jobStatus as { state: string; progress: number; data: unknown; failedReason: string; returnvalue: unknown }).state,
+          progress: (jobStatus as { state: string; progress: number; data: unknown; failedReason: string; returnvalue: unknown }).progress,
+          data: (jobStatus as { state: string; progress: number; data: unknown; failedReason: string; returnvalue: unknown }).data,
+          failedReason: (jobStatus as { state: string; progress: number; data: unknown; failedReason: string; returnvalue: unknown }).failedReason,
+          returnValue: (jobStatus as { state: string; progress: number; data: unknown; failedReason: string; returnvalue: unknown }).returnvalue,
         },
       });
     } catch (error: unknown) {

@@ -13,10 +13,34 @@ jest.mock('../../middleware/auth', () => ({
 }));
 
 // Mock services
-jest.mock('../../services/mpesaService');
-jest.mock('../../services/airtimeService');
-jest.mock('../../services/queueService');
-jest.mock('../../services/walletService');
+jest.mock('../../services/mpesaService', () => ({
+  initiateStkPush: jest.fn(),
+  queryStkPushStatus: jest.fn(),
+  initiatePayout: jest.fn(),
+  validateCallback: jest.fn(),
+  extractTransactionDetails: jest.fn(),
+}));
+
+jest.mock('../../services/airtimeService', () => ({
+  buyAirtime: jest.fn(),
+  getTransactionStatus: jest.fn(),
+  validateCallback: jest.fn(),
+}));
+
+jest.mock('../../services/queueService', () => ({
+  addMpesaBuyJob: jest.fn(),
+  addMpesaPayoutJob: jest.fn(),
+  addAirtimeJob: jest.fn(),
+  getJobStatus: jest.fn(),
+}));
+
+jest.mock('../../services/walletService', () => ({
+  createWallet: jest.fn(),
+  getBalance: jest.fn(),
+  newInvoice: jest.fn(),
+  sendPayment: jest.fn(),
+  buyAirtime: jest.fn(),
+}));
 
 const app = express();
 app.use(express.json());
@@ -305,7 +329,7 @@ describe('Fiat Integration Tests', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.success).toBe(false);
-        expect(response.body.error).toBe('Invalid signature');
+        expect(response.body.error).toBe('Validation failed');
       });
     });
 

@@ -30,8 +30,8 @@ const app = express();
 
 // Security middleware
 app.use(securityHeaders);
+app.use(compression() as any);
 app.use(createRateLimit());
-app.use(compression());
 
 // CORS configuration
 app.use(

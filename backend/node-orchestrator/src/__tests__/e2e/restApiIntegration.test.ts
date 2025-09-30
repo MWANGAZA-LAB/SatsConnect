@@ -1,9 +1,5 @@
 import request from 'supertest';
-import express from 'express';
-import cors from 'cors';
-import { checkEngineHealth } from '../../grpc';
-import walletRoutes from '../../routes/walletRoutes';
-import paymentRoutes from '../../routes/paymentRoutes';
+import app from '../../index';
 import { testUtils } from '../setup';
 import { generateToken } from '../../middleware/auth';
 
@@ -40,79 +36,15 @@ jest.mock('../../services/airtimeService', () => ({
   processCallback: jest.fn().mockResolvedValue({ success: true }),
 }));
 
-// Create test Express app
-const createTestApp = () => {
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
-
-  // Health check endpoint
-  app.get('/health', async (req, res) => {
-    try {
-      const engineHealthy = await checkEngineHealth();
-      res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        services: {
-          nodeOrchestrator: 'healthy',
-          rustEngine: engineHealthy ? 'healthy' : 'unhealthy',
-        },
-      });
-    } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        timestamp: new Date().toISOString(),
-        error: 'Health check failed',
-      });
-    }
-  });
-
-  // API routes
-  app.use('/api/wallet', walletRoutes);
-  app.use('/api/payments', paymentRoutes);
-
-  // Root endpoint
-  app.get('/', (req, res) => {
-    res.json({
-      name: 'SatsConnect Node Orchestrator',
-      version: '0.1.0',
-      description: 'Node.js orchestrator for SatsConnect Lightning Engine',
-      endpoints: {
-        health: '/health',
-        wallet: '/api/wallet',
-        payments: '/api/payments',
-      },
-    });
-  });
-
-  // Error handling middleware
-  app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    // Unhandled error in test
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-    });
-  });
-
-  // 404 handler
-  app.use('*', (req, res) => {
-    res.status(404).json({
-      success: false,
-      error: 'Endpoint not found',
-    });
-  });
-
-  return app;
-};
+// Use the main app from index.ts
 
 describe('REST API Integration Tests', () => {
-  let app: express.Application;
   let authToken: string;
 
   beforeAll(async () => {
     // Wait for engine to be ready
     await testUtils.waitForEngine();
-    app = createTestApp();
+    // Use the main app from index.ts
 
     // Generate auth token for tests
     authToken = generateToken({

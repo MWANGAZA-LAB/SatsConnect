@@ -13,7 +13,7 @@ const mockAxiosInstance = {
   post: jest.fn(),
 };
 
-mockedAxios.create.mockReturnValue(mockAxiosInstance as unknown);
+  mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
 
 // Mock config
 jest.mock('../../config', () => ({

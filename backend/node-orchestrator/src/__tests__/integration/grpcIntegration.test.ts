@@ -37,7 +37,7 @@ describe('gRPC Integration Tests', () => {
     it('should return healthy status when gRPC is available', async () => {
       mockGrpcClientService.checkHealth.mockResolvedValue(true);
 
-      const response = await request(app).get('/health').expect(200);
+      const response = await request(app).get('/health/health').expect(200);
 
       expect(response.body.status).toBe('ok');
       expect(response.body.services.nodeOrchestrator).toBe('healthy');
@@ -47,7 +47,7 @@ describe('gRPC Integration Tests', () => {
     it('should return degraded status when gRPC is unavailable', async () => {
       mockGrpcClientService.checkHealth.mockResolvedValue(false);
 
-      const response = await request(app).get('/health').expect(503);
+      const response = await request(app).get('/health/health').expect(503);
 
       expect(response.body.status).toBe('degraded');
       expect(response.body.services.nodeOrchestrator).toBe('healthy');
@@ -72,7 +72,7 @@ describe('gRPC Integration Tests', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
     });
 
     it('should create wallet successfully', async () => {
@@ -198,7 +198,7 @@ describe('gRPC Integration Tests', () => {
         },
       };
 
-      mockGrpcClientService.getClients.mockReturnValue(mockClients as unknown);
+      mockGrpcClientService.getClients.mockReturnValue(mockClients);
     });
 
     it('should process payment successfully', async () => {

@@ -1,7 +1,6 @@
 import request from 'supertest';
 import { app } from '../../index';
 import grpcClientService from '../../services/grpcClient';
-import { retryService } from '../../services/retryService';
 import logger from '../../utils/logger';
 
 // Mock the gRPC client

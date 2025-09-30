@@ -328,7 +328,7 @@ class MpesaService {
       }
     });
 
-    return details;
+    return details as any;
   }
 }
 

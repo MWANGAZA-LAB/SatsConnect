@@ -62,8 +62,8 @@ router.get('/health', async (req: Request, res: Response) => {
 });
 
 // Perform comprehensive health checks
-async function performHealthChecks(): Promise<Record<string, { status: string; details?: any; responseTime?: number }>> {
-  const checks: Record<string, { status: string; details?: any; responseTime?: number }> = {};
+async function performHealthChecks(): Promise<Record<string, { status: string; details?: unknown; responseTime?: string }>> {
+  const checks: Record<string, { status: string; details?: unknown; responseTime?: string }> = {};
 
   // gRPC Engine check
   try {

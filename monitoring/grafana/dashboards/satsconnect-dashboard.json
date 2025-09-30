@@ -1,0 +1,142 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SatsConnect System Dashboard",
+    "tags": ["satsconnect", "bitcoin", "lightning"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"satsconnect-orchestrator\"}",
+            "legendFormat": "Orchestrator Status"
+          },
+          {
+            "expr": "up{job=\"satsconnect-rust-engine\"}",
+            "legendFormat": "Rust Engine Status"
+          },
+          {
+            "expr": "up{job=\"redis\"}",
+            "legendFormat": "Redis Status"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"satsconnect-orchestrator\"}[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 3,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"satsconnect-orchestrator\"}[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"satsconnect-orchestrator\"}[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"satsconnect-orchestrator\",status=~\"5..\"}[5m])",
+            "legendFormat": "5xx errors/sec"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"satsconnect-orchestrator\",status=~\"4..\"}[5m])",
+            "legendFormat": "4xx errors/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 5,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{job=\"satsconnect-orchestrator\"}",
+            "legendFormat": "Orchestrator Memory"
+          },
+          {
+            "expr": "process_resident_memory_bytes{job=\"satsconnect-rust-engine\"}",
+            "legendFormat": "Rust Engine Memory"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Queue Status",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "redis_queue_size",
+            "legendFormat": "Queue Size"
+          },
+          {
+            "expr": "redis_queue_processed_total",
+            "legendFormat": "Processed Jobs"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 24
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

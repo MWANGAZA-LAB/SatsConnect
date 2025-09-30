@@ -40,6 +40,10 @@ export default function Onboarding() {
   const [progress, setProgress] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(width));
+  const [showSeedPhrase, setShowSeedPhrase] = useState(false);
+  const [backupMethod, setBackupMethod] = useState<'write' | 'copy' | 'qr'>('write');
+  const [seedPhraseCopied, setSeedPhraseCopied] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   const steps = [
     'welcome',
@@ -145,10 +149,19 @@ export default function Onboarding() {
   const copyMnemonic = async () => {
     try {
       await Clipboard.setString(mnemonic.join(' '));
-      Alert.alert('Copied', 'Seed phrase copied to clipboard');
+      setSeedPhraseCopied(true);
+      setTimeout(() => setSeedPhraseCopied(false), 3000);
     } catch (error) {
       Alert.alert('Error', 'Failed to copy seed phrase');
     }
+  };
+
+  const toggleSeedPhraseVisibility = () => {
+    setShowSeedPhrase(!showSeedPhrase);
+  };
+
+  const generateQRCode = () => {
+    setShowQRCode(true);
   };
 
   const completeOnboarding = async () => {
@@ -247,22 +260,82 @@ export default function Onboarding() {
     <View style={styles.stepContainer}>
       <Text style={styles.title}>Your Recovery Phrase</Text>
       <Text style={styles.subtitle}>
-        Write down these 12 words in order. This is your backup.
+        Choose how you'd like to backup your 12-word recovery phrase
       </Text>
 
+      {/* Backup Method Selection */}
+      <View style={styles.backupMethodContainer}>
+        <TouchableOpacity
+          style={[styles.backupMethod, backupMethod === 'write' && styles.backupMethodActive]}
+          onPress={() => setBackupMethod('write')}
+        >
+          <Text style={styles.backupMethodIcon}>✍️</Text>
+          <Text style={styles.backupMethodTitle}>Write Down</Text>
+          <Text style={styles.backupMethodDesc}>Safest method</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.backupMethod, backupMethod === 'copy' && styles.backupMethodActive]}
+          onPress={() => setBackupMethod('copy')}
+        >
+          <Text style={styles.backupMethodIcon}>📋</Text>
+          <Text style={styles.backupMethodTitle}>Copy</Text>
+          <Text style={styles.backupMethodDesc}>Quick backup</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.backupMethod, backupMethod === 'qr' && styles.backupMethodActive]}
+          onPress={() => setBackupMethod('qr')}
+        >
+          <Text style={styles.backupMethodIcon}>📱</Text>
+          <Text style={styles.backupMethodTitle}>QR Code</Text>
+          <Text style={styles.backupMethodDesc}>Scan to save</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Seed Phrase Display */}
       <Card style={styles.seedCard}>
-        <View style={styles.seedGrid}>
-          {mnemonic.map((word, index) => (
-            <View key={index} style={styles.seedWord}>
-              <Text style={styles.seedNumber}>{index + 1}</Text>
-              <Text style={styles.seedText}>{word}</Text>
-            </View>
-          ))}
+        <View style={styles.seedHeader}>
+          <Text style={styles.seedHeaderTitle}>Your 12-word recovery phrase:</Text>
+          <TouchableOpacity onPress={toggleSeedPhraseVisibility} style={styles.visibilityButton}>
+            <Text style={styles.visibilityButtonText}>
+              {showSeedPhrase ? '🙈 Hide' : '👁️ Show'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.copyButton} onPress={copyMnemonic}>
-          <Text style={styles.copyButtonText}>📋 Copy to Clipboard</Text>
-        </TouchableOpacity>
+        {showSeedPhrase ? (
+          <View style={styles.seedGrid}>
+            {mnemonic.map((word, index) => (
+              <View key={index} style={styles.seedWord}>
+                <Text style={styles.seedNumber}>{index + 1}</Text>
+                <Text style={styles.seedText}>{word}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.hiddenSeed}>
+            <Text style={styles.hiddenSeedText}>••• ••• ••• ••• ••• ••• ••• ••• ••• ••• ••• •••</Text>
+          </View>
+        )}
+
+        <View style={styles.seedActions}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.copyButton]} 
+            onPress={copyMnemonic}
+          >
+            <Text style={styles.actionButtonText}>
+              {seedPhraseCopied ? '✅ Copied!' : '📋 Copy'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.qrButton]} 
+            onPress={generateQRCode}
+          >
+            <Text style={styles.actionButtonText}>📱 QR Code</Text>
+          </TouchableOpacity>
+        </View>
       </Card>
 
       <Text style={styles.warningText}>
@@ -644,5 +717,90 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     flex: 2,
+  },
+  // Enhanced seed phrase styles
+  backupMethodContainer: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  backupMethod: {
+    flex: 1,
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.gray50,
+    borderRadius: theme.spacing.sm,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  backupMethodActive: {
+    backgroundColor: theme.colors.primary + '10',
+    borderColor: theme.colors.primary,
+  },
+  backupMethodIcon: {
+    fontSize: 24,
+    marginBottom: theme.spacing.xs,
+  },
+  backupMethodTitle: {
+    ...theme.typography.textStyles.h6,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  backupMethodDesc: {
+    ...theme.typography.textStyles.caption,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  seedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  seedHeaderTitle: {
+    ...theme.typography.textStyles.h6,
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  visibilityButton: {
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.gray100,
+    borderRadius: theme.spacing.sm,
+  },
+  visibilityButtonText: {
+    ...theme.typography.textStyles.body2,
+    color: theme.colors.primary,
+  },
+  hiddenSeed: {
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray50,
+    borderRadius: theme.spacing.sm,
+  },
+  hiddenSeedText: {
+    ...theme.typography.textStyles.h6,
+    color: theme.colors.textSecondary,
+    letterSpacing: 4,
+  },
+  seedActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    padding: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  copyButton: {
+    backgroundColor: theme.colors.gray100,
+  },
+  qrButton: {
+    backgroundColor: theme.colors.primary + '20',
+  },
+  actionButtonText: {
+    ...theme.typography.textStyles.body2,
+    color: theme.colors.textPrimary,
   },
 });
