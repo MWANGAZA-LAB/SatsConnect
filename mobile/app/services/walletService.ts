@@ -1,5 +1,6 @@
 import { apiService } from './api';
-import { secureStorage, WalletData, TransactionData } from './secureStorage';
+import { secureStorageV2 } from './secureStorageV2';
+import { WalletData, TransactionData } from './types';
 import { authService } from './authService';
 
 export interface WalletState {
@@ -39,8 +40,9 @@ class WalletService {
       this.notifyListeners();
 
       // Load wallet data from secure storage
-      const wallet = await secureStorage.getWalletData();
-      if (wallet) {
+      const walletStr = await secureStorageV2.loadSecureItem('wallet_data', 'default_password');
+      if (walletStr) {
+        const wallet = JSON.parse(walletStr);
         this.walletState.wallet = wallet;
 
         // Load balance
@@ -103,9 +105,9 @@ class WalletService {
         };
 
         // Save wallet data securely
-        await secureStorage.saveWalletData(walletData);
+        await secureStorageV2.saveSecureItem('wallet_data', JSON.stringify(walletData), 'default_password');
         if (mnemonic) {
-          await secureStorage.saveMnemonic(mnemonic);
+          await secureStorageV2.saveSecureItem('mnemonic', mnemonic, 'default_password');
         }
 
         this.walletState.wallet = walletData;
@@ -200,10 +202,9 @@ class WalletService {
           type: 'send',
           amount: amountSats,
           status:
-            response.data.status === 'SUCCEEDED' ? 'completed' : 'pending',
-          timestamp: new Date().toISOString(),
+            response.data.status === 'SUCCEEDED' ? 'confirmed' : 'pending',
+          timestamp: Date.now(),
           description: description || 'Payment sent',
-          paymentHash: response.data.payment_hash,
         };
 
         await this.addTransaction(transaction);
@@ -248,13 +249,11 @@ class WalletService {
         // Add transaction to local storage
         const transaction: TransactionData = {
           id: response.data.payment_hash,
-          type: 'airtime',
+          type: 'send',
           amount: amountSats,
-          status: response.data.status === 'PENDING' ? 'pending' : 'completed',
-          timestamp: new Date().toISOString(),
+          status: response.data.status === 'PENDING' ? 'pending' : 'confirmed',
+          timestamp: Date.now(),
           description: `Airtime for ${phoneNumber}`,
-          paymentHash: response.data.payment_hash,
-          invoice: response.data.invoice,
         };
 
         await this.addTransaction(transaction);
@@ -282,7 +281,8 @@ class WalletService {
 
   public async loadTransactions(): Promise<void> {
     try {
-      const transactions = await secureStorage.getTransactions();
+      const transactionsStr = await secureStorageV2.loadSecureItem('transactions', 'default_password');
+      const transactions = transactionsStr ? JSON.parse(transactionsStr) : [];
       this.walletState.transactions = transactions;
       this.notifyListeners();
     } catch (error) {
@@ -292,7 +292,8 @@ class WalletService {
 
   private async addTransaction(transaction: TransactionData): Promise<void> {
     try {
-      await secureStorage.addTransaction(transaction);
+      const transactions = [...this.walletState.transactions, transaction];
+      await secureStorageV2.saveSecureItem('transactions', JSON.stringify(transactions), 'default_password');
       this.walletState.transactions.unshift(transaction);
       this.notifyListeners();
     } catch (error) {
@@ -305,23 +306,16 @@ class WalletService {
     updates: Partial<TransactionData>
   ): Promise<boolean> {
     try {
-      const success = await secureStorage.updateTransaction(
-        transactionId,
-        updates
-      );
-      if (success) {
-        const index = this.walletState.transactions.findIndex(
-          t => t.id === transactionId
-        );
-        if (index !== -1) {
-          this.walletState.transactions[index] = {
-            ...this.walletState.transactions[index],
-            ...updates,
-          };
-          this.notifyListeners();
-        }
+      const transactions = [...this.walletState.transactions];
+      const index = transactions.findIndex(t => t.id === transactionId);
+      if (index !== -1) {
+        transactions[index] = { ...transactions[index], ...updates };
+        await secureStorageV2.saveSecureItem('transactions', JSON.stringify(transactions), 'default_password');
+        this.walletState.transactions = transactions;
+        this.notifyListeners();
+        return true;
       }
-      return success;
+      return false;
     } catch (error) {
       console.error('Failed to update transaction:', error);
       return false;
@@ -363,6 +357,44 @@ class WalletService {
     } catch (error) {
       console.error('Failed to reset wallet:', error);
       return false;
+    }
+  }
+
+  // Add missing methods for compatibility
+  async getCurrentWallet() {
+    return this.walletState.wallet;
+  }
+
+  async getBalance() {
+    return this.walletState.balance;
+  }
+
+  async generateInvoice(amountSats: number, description: string) {
+    try {
+      if (!this.walletState.wallet) {
+        throw new Error('No wallet available');
+      }
+
+      const invoice = await apiService.createInvoice(amountSats, description);
+      
+      // Add to transactions
+      const transaction: TransactionData = {
+        id: invoice.data?.payment_hash || 'unknown',
+        type: 'receive',
+        amount: amountSats,
+        description,
+        timestamp: Date.now(),
+        status: 'pending',
+        txHash: invoice.data?.payment_hash || 'unknown',
+      };
+      
+      this.walletState.transactions.unshift(transaction);
+      this.notifyListeners();
+      
+      return invoice;
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      throw error;
     }
   }
 }

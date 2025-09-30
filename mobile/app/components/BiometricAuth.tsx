@@ -12,7 +12,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { Button } from './Button';
 import { Card } from './Card';
 import { theme } from '../theme';
-import { secureStorage } from '../services/secureStorage';
+import { secureStorageV2 } from '../services/secureStorageV2';
 
 const { width, height } = Dimensions.get('window');
 

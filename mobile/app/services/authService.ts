@@ -1,6 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
-import { secureStorage } from './secureStorage';
+import { secureStorageV2 } from './secureStorageV2';
 import { apiService } from './api';
 
 export interface AuthState {
@@ -30,13 +30,14 @@ class AuthService {
       this.notifyListeners();
 
       // Check if wallet exists
-      const hasWallet = await secureStorage.hasWallet();
+      const hasWallet = await secureStorageV2.loadSecureItem('wallet_data', 'default_password') !== null;
       this.authState.hasWallet = hasWallet;
 
       // Check if biometric is available and enabled
       const biometricAvailable = await LocalAuthentication.hasHardwareAsync();
       const biometricEnrolled = await LocalAuthentication.isEnrolledAsync();
-      const preferences = await secureStorage.getUserPreferences();
+      const preferencesStr = await secureStorageV2.loadSecureItem('user_preferences', 'default_password');
+      const preferences = preferencesStr ? JSON.parse(preferencesStr) : null;
 
       this.authState.biometricEnabled =
         biometricAvailable &&
@@ -48,7 +49,7 @@ class AuthService {
         this.authState.isAuthenticated = false;
       } else {
         // Check if we have a valid auth token
-        const token = await secureStorage.getAuthToken();
+        const token = await secureStorageV2.loadSecureItem('auth_token', 'default_password');
         if (token) {
           this.authState.isAuthenticated = true;
           await apiService.setAuthToken(token);
@@ -111,7 +112,7 @@ class AuthService {
   public async authenticateWithPin(pin: string): Promise<boolean> {
     try {
       // Get stored PIN hash from secure storage
-      const storedPinHash = await secureStorage.getStoredPinHash();
+      const storedPinHash = await secureStorageV2.loadSecureItem('pin_hash', 'default_password');
       if (!storedPinHash) {
         // No PIN set, deny access
         return false;
@@ -138,7 +139,10 @@ class AuthService {
 
   private async hashPin(pin: string): Promise<string> {
     // Use a proper hashing algorithm with salt
-    const salt = await secureStorage.getPinSalt();
+    const salt = await secureStorageV2.loadSecureItem('pin_salt', 'default_password');
+    if (!salt) {
+      throw new Error('No salt found for PIN hashing');
+    }
     const combined = pin + salt;
     return Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
@@ -157,7 +161,7 @@ class AuthService {
 
   public async login(token: string): Promise<boolean> {
     try {
-      await secureStorage.saveAuthToken(token);
+      await secureStorageV2.saveSecureItem('auth_token', token, 'default_password');
       await apiService.setAuthToken(token);
 
       this.authState.isAuthenticated = true;
@@ -171,7 +175,7 @@ class AuthService {
 
   public async logout(): Promise<void> {
     try {
-      await secureStorage.clearAuthToken();
+      await secureStorageV2.saveSecureItem('auth_token', '', 'default_password');
       await apiService.clearAuthToken();
 
       this.authState.isAuthenticated = false;
@@ -190,7 +194,8 @@ class AuthService {
         return false;
       }
 
-      const preferences = (await secureStorage.getUserPreferences()) || {
+      const preferencesStr = await secureStorageV2.loadSecureItem('user_preferences', 'default_password');
+      const preferences = preferencesStr ? JSON.parse(preferencesStr) : {
         currency: 'KES',
         language: 'en',
         notifications: true,
@@ -199,7 +204,7 @@ class AuthService {
       };
 
       preferences.biometricEnabled = true;
-      await secureStorage.saveUserPreferences(preferences);
+      await secureStorageV2.saveSecureItem('user_preferences', JSON.stringify(preferences), 'default_password');
 
       this.authState.biometricEnabled = true;
       this.notifyListeners();
@@ -212,10 +217,11 @@ class AuthService {
 
   public async disableBiometric(): Promise<boolean> {
     try {
-      const preferences = await secureStorage.getUserPreferences();
+      const preferencesStr = await secureStorageV2.loadSecureItem('user_preferences', 'default_password');
+      const preferences = preferencesStr ? JSON.parse(preferencesStr) : null;
       if (preferences) {
         preferences.biometricEnabled = false;
-        await secureStorage.saveUserPreferences(preferences);
+        await secureStorageV2.saveSecureItem('user_preferences', JSON.stringify(preferences), 'default_password');
       }
 
       this.authState.biometricEnabled = false;
@@ -252,13 +258,13 @@ class AuthService {
       const saltString = btoa(String.fromCharCode(...salt));
 
       // Save salt
-      await secureStorage.savePinSalt(saltString);
+      await secureStorageV2.saveSecureItem('pin_salt', saltString, 'default_password');
 
       // Hash PIN with salt
       const pinHash = await this.hashPin(pin);
 
       // Save PIN hash
-      await secureStorage.savePinHash(pinHash);
+      await secureStorageV2.saveSecureItem('pin_hash', pinHash, 'default_password');
 
       return true;
     } catch (error) {
@@ -269,7 +275,12 @@ class AuthService {
 
   public async resetWallet(): Promise<boolean> {
     try {
-      await secureStorage.clearAllData();
+      // Clear all data by removing all stored items
+      await secureStorageV2.saveSecureItem('wallet_data', '', 'default_password');
+      await secureStorageV2.saveSecureItem('auth_token', '', 'default_password');
+      await secureStorageV2.saveSecureItem('user_preferences', '', 'default_password');
+      await secureStorageV2.saveSecureItem('pin_hash', '', 'default_password');
+      await secureStorageV2.saveSecureItem('pin_salt', '', 'default_password');
       await apiService.clearAuthToken();
 
       this.authState.isAuthenticated = false;

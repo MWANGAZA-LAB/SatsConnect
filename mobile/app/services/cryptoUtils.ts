@@ -120,10 +120,16 @@ async function deriveKeyPBKDF2(
       ["deriveKey"]
     );
 
+    // Ensure we have an ArrayBuffer, not SharedArrayBuffer
+    const saltBuffer = salt.buffer instanceof ArrayBuffer ? salt.buffer : new ArrayBuffer(salt.length);
+    if (!(salt.buffer instanceof ArrayBuffer)) {
+      new Uint8Array(saltBuffer).set(salt);
+    }
+
     return crypto.subtle.deriveKey(
       {
         name: "PBKDF2",
-        salt: salt.buffer,
+        salt: saltBuffer,
         iterations: CRYPTO_CONSTANTS.PBKDF2_ITERATIONS,
         hash: "SHA-256",
       },
@@ -189,7 +195,7 @@ export async function aesGcmEncrypt(
 
     return {
       ciphertext: bufToBase64(ciphertextBuf),
-      iv: bufToBase64(iv),
+      iv: bufToBase64(iv.buffer),
     };
   } catch (error) {
     throw new Error(`AES-GCM encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

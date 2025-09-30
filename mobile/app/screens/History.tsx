@@ -237,7 +237,7 @@ export default function History() {
                         {formatSats(transaction.amount)}
                       </Text>
                       <Text style={styles.transactionTime}>
-                        {formatDate(transaction.timestamp)}
+                        {formatDate(transaction.timestamp.toString())}
                       </Text>
                     </View>
                   </View>
@@ -258,9 +258,9 @@ export default function History() {
                       </Text>
                     </View>
 
-                    {transaction.paymentHash && (
+                    {transaction.txHash && (
                       <Text style={styles.paymentHash}>
-                        {transaction.paymentHash.substring(0, 16)}...
+                        {transaction.txHash.substring(0, 16)}...
                       </Text>
                     )}
                   </View>

@@ -96,7 +96,7 @@ export default function SellBitcoin() {
       
       if (wallet) {
         const balance = await walletService.getBalance();
-        setWalletBalance(balance.lightningBalance || 0);
+        setWalletBalance(balance.lightningSats || 0);
       }
     } catch (error) {
       console.error('Failed to get current wallet:', error);
@@ -179,7 +179,7 @@ export default function SellBitcoin() {
       const response = await apiService.sellBitcoinWithMpesa({
         phoneNumber: phoneNumber.replace(/\s/g, ''),
         amount: parseFloat(amount),
-        lightningInvoice: invoiceResponse.invoice,
+        lightningInvoice: invoiceResponse.data?.invoice || '',
         accountReference: `SATS_SELL_${Date.now()}`,
         transactionDesc: 'Bitcoin Sale',
       });
@@ -260,7 +260,6 @@ export default function SellBitcoin() {
             onChangeText={setPhoneNumber}
             keyboardType="phone-pad"
             error={errors.phoneNumber}
-            autoComplete="tel"
           />
 
           <View style={styles.amountSection}>

@@ -11,7 +11,7 @@ import {
 import { Card } from './Card';
 import { Button } from './Button';
 import { theme } from '../theme';
-import { secureStorage } from '../services/secureStorage';
+import { secureStorageV2 } from '../services/secureStorageV2';
 import * as Crypto from 'expo-crypto';
 
 const { width } = Dimensions.get('window');
@@ -127,8 +127,8 @@ export const PINEntry: React.FC<PINEntryProps> = ({
 
   const verifyPIN = async (pinToVerify: string) => {
     try {
-      const storedPinHash = await secureStorage.getStoredPinHash();
-      const storedSalt = await secureStorage.getPinSalt();
+      const storedPinHash = await secureStorageV2.loadSecureItem('pin_hash', 'default_password');
+      const storedSalt = await secureStorageV2.loadSecureItem('pin_salt', 'default_password');
 
       if (!storedPinHash || !storedSalt) {
         setError('No PIN set. Please set up a PIN first.');
@@ -175,8 +175,8 @@ export const PINEntry: React.FC<PINEntryProps> = ({
         { encoding: Crypto.CryptoEncoding.HEX }
       );
 
-      await secureStorage.savePinHash(hashedPin);
-      await secureStorage.savePinSalt(salt);
+      await secureStorageV2.saveSecureItem('pin_hash', hashedPin, 'default_password');
+      await secureStorageV2.saveSecureItem('pin_salt', salt, 'default_password');
 
       onSetupComplete?.(pin);
       onSuccess();

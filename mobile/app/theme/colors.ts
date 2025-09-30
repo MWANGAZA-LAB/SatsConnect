@@ -44,6 +44,7 @@ export const colors = {
   surfaceVariant: '#F5F5F5',
 
   // Text colors
+  text: '#212121', // Main text color
   textPrimary: '#212121',
   textSecondary: '#757575',
   textDisabled: '#BDBDBD',

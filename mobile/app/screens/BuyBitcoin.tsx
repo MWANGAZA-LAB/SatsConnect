@@ -220,7 +220,6 @@ export default function BuyBitcoin() {
             onChangeText={setPhoneNumber}
             keyboardType="phone-pad"
             error={errors.phoneNumber}
-            autoComplete="tel"
           />
 
           <View style={styles.amountSection}>
