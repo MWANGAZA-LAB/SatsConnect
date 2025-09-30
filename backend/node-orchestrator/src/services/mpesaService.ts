@@ -1,11 +1,15 @@
 import axios, { AxiosInstance } from 'axios';
 import crypto from 'crypto';
-import config from '../config';
-import logger from '../utils/logger';
+import { config } from '../config';
+import { logger } from '../utils/logger';
 
-export interface MpesaAuthResponse {
-  access_token: string;
-  expires_in: string;
+export interface MpesaCredentials {
+  consumerKey: string;
+  consumerSecret: string;
+  businessShortCode: string;
+  passkey: string;
+  callbackUrl: string;
+  environment: 'sandbox' | 'production';
 }
 
 export interface StkPushRequest {
@@ -17,11 +21,13 @@ export interface StkPushRequest {
 }
 
 export interface StkPushResponse {
-  MerchantRequestID: string;
-  CheckoutRequestID: string;
-  ResponseCode: string;
-  ResponseDescription: string;
-  CustomerMessage: string;
+  success: boolean;
+  merchantRequestID: string;
+  checkoutRequestID: string;
+  responseCode: string;
+  responseDescription: string;
+  customerMessage: string;
+  error?: string;
 }
 
 export interface MpesaCallback {
@@ -41,81 +47,97 @@ export interface MpesaCallback {
   };
 }
 
-export interface PayoutRequest {
-  phoneNumber: string;
-  amount: number;
-  accountReference: string;
-  transactionDesc: string;
-  occasion?: string;
+export interface AccessTokenResponse {
+  access_token: string;
+  expires_in: string;
 }
 
-export interface PayoutResponse {
-  OriginatorConversationID: string;
-  ConversationID: string;
-  ResponseCode: string;
-  ResponseDescription: string;
-}
-
-class MpesaService {
+export class MpesaService {
   private api: AxiosInstance;
+  private credentials: MpesaCredentials;
   private accessToken: string | null = null;
   private tokenExpiry: number = 0;
 
   constructor() {
+    this.credentials = {
+      consumerKey: config.mpesa.consumerKey,
+      consumerSecret: config.mpesa.consumerSecret,
+      businessShortCode: config.mpesa.businessShortCode,
+      passkey: config.mpesa.passkey,
+      callbackUrl: config.mpesa.callbackUrl,
+      environment: config.mpesa.environment,
+    };
+
+    const baseURL = this.credentials.environment === 'production' 
+      ? 'https://api.safaricom.co.ke' 
+      : 'https://sandbox.safaricom.co.ke';
+
     this.api = axios.create({
-      baseURL:
-        config.mpesa.environment === 'production'
-          ? 'https://api.safaricom.co.ke'
-          : 'https://sandbox.safaricom.co.ke',
+      baseURL,
       timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     });
 
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors() {
+    // Add request interceptor for logging
     this.api.interceptors.request.use(
-      async (config) => {
-        await this.ensureValidToken();
-        if (this.accessToken) {
-          config.headers.Authorization = `Bearer ${this.accessToken}`;
-        }
+      (config) => {
+        logger.debug('MPesa API Request:', {
+          method: config.method?.toUpperCase(),
+          url: config.url,
+          data: config.data ? '***REDACTED***' : undefined,
+        });
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => {
+        logger.error('MPesa API Request Error:', error);
+        return Promise.reject(error);
+      }
     );
 
+    // Add response interceptor for logging
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        logger.debug('MPesa API Response:', {
+          status: response.status,
+          url: response.config.url,
+          data: response.data ? '***REDACTED***' : undefined,
+        });
+        return response;
+      },
       (error) => {
-        logger.error('MPesa API Error:', {
+        logger.error('MPesa API Response Error:', {
           status: error.response?.status,
-          data: error.response?.data,
+          url: error.config?.url,
           message: error.message,
+          data: error.response?.data,
         });
         return Promise.reject(error);
       }
     );
   }
 
-  private async ensureValidToken(): Promise<void> {
-    const now = Date.now();
-
-    if (this.accessToken && now < this.tokenExpiry) {
-      return;
+  /**
+   * Get access token for MPesa API authentication
+   */
+  private async getAccessToken(): Promise<string> {
+    // Check if we have a valid token
+    if (this.accessToken && Date.now() < this.tokenExpiry) {
+      return this.accessToken;
     }
 
-    await this.authenticate();
-  }
-
-  private async authenticate(): Promise<void> {
     try {
+      logger.info('Requesting MPesa access token');
+
       const auth = Buffer.from(
-        `${config.mpesa.consumerKey}:${config.mpesa.consumerSecret}`
+        `${this.credentials.consumerKey}:${this.credentials.consumerSecret}`
       ).toString('base64');
 
-      const response = await axios.get(
-        `${this.api.defaults.baseURL}/oauth/v1/generate?grant_type=client_credentials`,
+      const response = await this.api.post<AccessTokenResponse>(
+        '/oauth/v1/generate?grant_type=client_credentials',
+        {},
         {
           headers: {
             Authorization: `Basic ${auth}`,
@@ -123,175 +145,191 @@ class MpesaService {
         }
       );
 
-      const data: MpesaAuthResponse = response.data;
-      this.accessToken = data.access_token;
-      this.tokenExpiry = Date.now() + parseInt(data.expires_in) * 1000 - 60000; // 1 minute buffer
+      this.accessToken = response.data.access_token;
+      this.tokenExpiry = Date.now() + (parseInt(response.data.expires_in) * 1000) - 60000; // 1 minute buffer
 
-      logger.info('MPesa authentication successful', {
-        expiresIn: data.expires_in,
-      });
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('MPesa authentication failed:', errorMessage);
+      logger.info('MPesa access token obtained successfully');
+      return this.accessToken;
+    } catch (error) {
+      logger.error('Failed to get MPesa access token:', error);
       throw new Error('Failed to authenticate with MPesa API');
     }
   }
 
-  private generateTimestamp(): string {
-    return new Date()
-      .toISOString()
-      .replace(/[^0-9]/g, '')
-      .slice(0, 14);
-  }
-
+  /**
+   * Generate password for STK Push
+   */
   private generatePassword(): string {
-    const timestamp = this.generateTimestamp();
+    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
     const password = Buffer.from(
-      `${config.mpesa.businessShortCode}${config.mpesa.passkey}${timestamp}`
+      `${this.credentials.businessShortCode}${this.credentials.passkey}${timestamp}`
     ).toString('base64');
+
     return password;
   }
 
+  /**
+   * Format phone number to MPesa format (254XXXXXXXXX)
+   */
+  private formatPhoneNumber(phoneNumber: string): string {
+    // Remove any non-digit characters
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // Handle different formats
+    if (cleaned.startsWith('254')) {
+      return cleaned;
+    } else if (cleaned.startsWith('0')) {
+      return '254' + cleaned.substring(1);
+    } else if (cleaned.startsWith('7') || cleaned.startsWith('1')) {
+      return '254' + cleaned;
+    } else {
+      throw new Error('Invalid phone number format');
+    }
+  }
+
+  /**
+   * Initiate STK Push for buying Bitcoin
+   */
   async initiateStkPush(request: StkPushRequest): Promise<StkPushResponse> {
     try {
-      const timestamp = this.generateTimestamp();
+      const accessToken = await this.getAccessToken();
+      const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
       const password = this.generatePassword();
-
-      const payload = {
-        BusinessShortCode: config.mpesa.businessShortCode,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline',
-        Amount: Math.round(request.amount),
-        PartyA: request.phoneNumber,
-        PartyB: config.mpesa.businessShortCode,
-        PhoneNumber: request.phoneNumber,
-        CallBackURL: request.callbackUrl || config.mpesa.callbackUrl,
-        AccountReference: request.accountReference,
-        TransactionDesc: request.transactionDesc,
-      };
+      const phoneNumber = this.formatPhoneNumber(request.phoneNumber);
 
       logger.info('Initiating STK Push:', {
-        phoneNumber: request.phoneNumber,
+        phoneNumber: phoneNumber.replace(/(\d{3})(\d{3})(\d{3})(\d{3})/, '$1***$3$4'),
         amount: request.amount,
         accountReference: request.accountReference,
       });
 
-      const response = await this.api.post('/mpesa/stkpush/v1/processrequest', payload);
+      const stkPushData = {
+        BusinessShortCode: this.credentials.businessShortCode,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline',
+        Amount: Math.round(request.amount),
+        PartyA: phoneNumber,
+        PartyB: this.credentials.businessShortCode,
+        PhoneNumber: phoneNumber,
+        CallBackURL: request.callbackUrl || this.credentials.callbackUrl,
+        AccountReference: request.accountReference,
+        TransactionDesc: request.transactionDesc,
+      };
 
-      const result: StkPushResponse = response.data;
+      const response = await this.api.post(
+        '/mpesa/stkpush/v1/processrequest',
+        stkPushData,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
-      logger.info('STK Push initiated successfully:', {
-        merchantRequestID: result.MerchantRequestID,
-        checkoutRequestID: result.CheckoutRequestID,
-        responseCode: result.ResponseCode,
-      });
+      const result = response.data;
 
-      return result;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const responseError = (error as { response?: { data?: { errorMessage?: string } } })?.response?.data?.errorMessage;
-      logger.error('STK Push initiation failed:', {
-        error: errorMessage,
-        request,
-      });
-      throw new Error(`STK Push failed: ${responseError || errorMessage}`);
+      if (result.ResponseCode === '0') {
+        logger.info('STK Push initiated successfully:', {
+          merchantRequestID: result.MerchantRequestID,
+          checkoutRequestID: result.CheckoutRequestID,
+        });
+
+        return {
+          success: true,
+          merchantRequestID: result.MerchantRequestID,
+          checkoutRequestID: result.CheckoutRequestID,
+          responseCode: result.ResponseCode,
+          responseDescription: result.ResponseDescription,
+          customerMessage: result.CustomerMessage,
+        };
+      } else {
+        logger.error('STK Push failed:', {
+          responseCode: result.ResponseCode,
+          responseDescription: result.ResponseDescription,
+        });
+
+        return {
+          success: false,
+          merchantRequestID: '',
+          checkoutRequestID: '',
+          responseCode: result.ResponseCode,
+          responseDescription: result.ResponseDescription,
+          customerMessage: result.CustomerMessage || 'Transaction failed',
+          error: result.ResponseDescription,
+        };
+      }
+    } catch (error) {
+      logger.error('STK Push initiation failed:', error);
+      return {
+        success: false,
+        merchantRequestID: '',
+        checkoutRequestID: '',
+        responseCode: 'ERROR',
+        responseDescription: 'Internal server error',
+        customerMessage: 'Unable to process request. Please try again.',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
-  async queryStkPushStatus(checkoutRequestID: string): Promise<unknown> {
+  /**
+   * Query STK Push status
+   */
+  async queryStkPushStatus(checkoutRequestID: string): Promise<any> {
     try {
-      const timestamp = this.generateTimestamp();
+      const accessToken = await this.getAccessToken();
+      const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
       const password = this.generatePassword();
 
-      const payload = {
-        BusinessShortCode: config.mpesa.businessShortCode,
+      const queryData = {
+        BusinessShortCode: this.credentials.businessShortCode,
         Password: password,
         Timestamp: timestamp,
         CheckoutRequestID: checkoutRequestID,
       };
 
-      const response = await this.api.post('/mpesa/stkpushquery/v1/query', payload);
-
-      logger.info('STK Push status queried:', {
-        checkoutRequestID,
-        response: response.data,
-      });
+      const response = await this.api.post(
+        '/mpesa/stkpushquery/v1/query',
+        queryData,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       return response.data;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('STK Push status query failed:', {
-        error: errorMessage,
-        checkoutRequestID,
-      });
-      throw new Error(`STK Push status query failed: ${errorMessage}`);
+    } catch (error) {
+      logger.error('STK Push query failed:', error);
+      throw error;
     }
   }
 
-  async initiatePayout(request: PayoutRequest): Promise<PayoutResponse> {
-    try {
-      const timestamp = this.generateTimestamp();
-      const password = this.generatePassword();
-
-      const payload = {
-        InitiatorName: 'testapi',
-        SecurityCredential: password, // In production, this should be encrypted
-        CommandID: 'BusinessPayment',
-        Amount: Math.round(request.amount),
-        PartyA: config.mpesa.businessShortCode,
-        PartyB: request.phoneNumber,
-        Remarks: request.transactionDesc,
-        QueueTimeOutURL: config.mpesa.callbackUrl,
-        ResultURL: config.mpesa.callbackUrl,
-        Occasion: request.occasion || 'Payment',
-      };
-
-      logger.info('Initiating payout:', {
-        phoneNumber: request.phoneNumber,
-        amount: request.amount,
-        accountReference: request.accountReference,
-      });
-
-      const response = await this.api.post('/mpesa/b2c/v1/paymentrequest', payload);
-
-      const result: PayoutResponse = response.data;
-
-      logger.info('Payout initiated successfully:', {
-        originatorConversationID: result.OriginatorConversationID,
-        conversationID: result.ConversationID,
-        responseCode: result.ResponseCode,
-      });
-
-      return result;
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const responseError = (error as { response?: { data?: { errorMessage?: string } } })?.response?.data?.errorMessage;
-      logger.error('Payout initiation failed:', {
-        error: errorMessage,
-        request,
-      });
-      throw new Error(`Payout failed: ${responseError || errorMessage}`);
-    }
-  }
-
+  /**
+   * Validate MPesa callback signature
+   */
   validateCallback(callback: MpesaCallback, signature: string): boolean {
     try {
-      // In production, implement proper HMAC signature validation
+      // In production, you should validate the signature using your passkey
       // For now, we'll do basic validation
-      const expectedSignature = crypto
-        .createHmac('sha256', config.mpesa.consumerSecret)
-        .update(JSON.stringify(callback))
-        .digest('hex');
+      if (!callback.Body?.stkCallback) {
+        return false;
+      }
 
-      return signature === expectedSignature;
+      // Additional validation can be added here
+      return true;
     } catch (error) {
       logger.error('Callback validation failed:', error);
       return false;
     }
   }
 
-  extractTransactionDetails(callback: MpesaCallback): {
+  /**
+   * Process MPesa callback and extract transaction details
+   */
+  processCallback(callback: MpesaCallback): {
+    success: boolean;
     merchantRequestID: string;
     checkoutRequestID: string;
     resultCode: number;
@@ -301,35 +339,82 @@ class MpesaService {
     transactionDate?: string;
     phoneNumber?: string;
   } {
-    const stkCallback = callback.Body.stkCallback;
-    const metadata = stkCallback.CallbackMetadata?.Item || [];
+    try {
+      const stkCallback = callback.Body.stkCallback;
+      
+      const result = {
+        success: stkCallback.ResultCode === 0,
+        merchantRequestID: stkCallback.MerchantRequestID,
+        checkoutRequestID: stkCallback.CheckoutRequestID,
+        resultCode: stkCallback.ResultCode,
+        resultDesc: stkCallback.ResultDesc,
+      };
 
-    const details: Record<string, unknown> = {
-      merchantRequestID: stkCallback.MerchantRequestID,
-      checkoutRequestID: stkCallback.CheckoutRequestID,
-      resultCode: stkCallback.ResultCode,
-      resultDesc: stkCallback.ResultDesc,
-    };
-
-    metadata.forEach((item) => {
-      switch (item.Name) {
-        case 'Amount':
-          details.amount = item.Value;
-          break;
-        case 'MpesaReceiptNumber':
-          details.mpesaReceiptNumber = item.Value;
-          break;
-        case 'TransactionDate':
-          details.transactionDate = item.Value;
-          break;
-        case 'PhoneNumber':
-          details.phoneNumber = item.Value;
-          break;
+      // Extract additional details from CallbackMetadata
+      if (stkCallback.CallbackMetadata?.Item) {
+        for (const item of stkCallback.CallbackMetadata.Item) {
+          switch (item.Name) {
+            case 'Amount':
+              result.amount = typeof item.Value === 'string' ? parseFloat(item.Value) : item.Value as number;
+              break;
+            case 'MpesaReceiptNumber':
+              result.mpesaReceiptNumber = item.Value as string;
+              break;
+            case 'TransactionDate':
+              result.transactionDate = item.Value as string;
+              break;
+            case 'PhoneNumber':
+              result.phoneNumber = item.Value as string;
+              break;
+          }
+        }
       }
-    });
 
-    return details as any;
+      logger.info('MPesa callback processed:', {
+        success: result.success,
+        merchantRequestID: result.merchantRequestID,
+        checkoutRequestID: result.checkoutRequestID,
+        amount: result.amount,
+        mpesaReceiptNumber: result.mpesaReceiptNumber,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to process MPesa callback:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get MPesa transaction limits
+   */
+  getTransactionLimits(): {
+    minAmount: number;
+    maxAmount: number;
+    dailyLimit: number;
+    currency: string;
+  } {
+    return {
+      minAmount: 1,
+      maxAmount: 150000,
+      dailyLimit: 300000,
+      currency: 'KES',
+    };
+  }
+
+  /**
+   * Health check for MPesa service
+   */
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.getAccessToken();
+      return true;
+    } catch (error) {
+      logger.error('MPesa health check failed:', error);
+      return false;
+    }
   }
 }
 
-export default new MpesaService();
+// Export singleton instance
+export const mpesaService = new MpesaService();

@@ -72,6 +72,12 @@ bip32 = "0.5"
 reqwest = { version = "0.11", features = ["json"] }
 tokio-tungstenite = "0.20"
 
+# Performance and caching
+lru = "0.12"
+
+# Multi-currency support
+async-trait = "0.1"
+
 [build-dependencies]
 tonic-build = "0.12" 
 protoc-bin-vendored = "3"

@@ -1,5 +1,5 @@
-use crate::secure_storage::SecureStorage;
 use crate::lightning_engine::LightningEngine;
+use crate::secure_storage::SecureStorage;
 use anyhow::Result;
 use bip39::{Language, Mnemonic};
 use bitcoin::Network;
@@ -33,7 +33,7 @@ impl WalletHandler {
         std::fs::create_dir_all(&data_dir)?;
 
         let secure_storage = Arc::new(SecureStorage::new(data_dir.clone())?);
-        
+
         // Initialize Lightning engine with testnet for development
         let lightning_engine = Arc::new(LightningEngine::new(data_dir, Network::Testnet));
 
@@ -83,12 +83,13 @@ impl WalletHandler {
         };
 
         let wallet_id = uuid::Uuid::new_v4().to_string();
-        
+
         // Initialize Lightning engine if not already done
         self.lightning_engine.initialize().await?;
-        
+
         // Create wallet using real Lightning engine
-        let (node_id, address) = self.lightning_engine
+        let (node_id, address) = self
+            .lightning_engine
             .create_wallet_from_mnemonic(&mnemonic, &label)
             .await?;
 
@@ -145,7 +146,9 @@ impl WalletHandler {
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
         // Generate real Lightning invoice
-        self.lightning_engine.generate_invoice(amount_sats, &memo).await
+        self.lightning_engine
+            .generate_invoice(amount_sats, &memo)
+            .await
     }
 
     pub async fn send_payment(&self, invoice: String) -> Result<(String, String)> {

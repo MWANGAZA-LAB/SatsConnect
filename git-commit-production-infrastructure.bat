@@ -30,7 +30,7 @@ git status --porcelain
 
 echo.
 echo 📝 Creating commit message...
-set COMMIT_MESSAGE=🚀 Complete Production Infrastructure Implementation
+set COMMIT_MESSAGE=🚀 Complete Production Infrastructure + Fix Rust Formatting
 
 echo.
 echo 🎯 Commit Details:

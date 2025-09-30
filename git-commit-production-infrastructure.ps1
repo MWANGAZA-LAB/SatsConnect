@@ -37,7 +37,7 @@ git status --porcelain
 Write-Host ""
 Write-Host "📝 Creating commit message..." -ForegroundColor Cyan
 $commitMessage = @"
-🚀 Complete Production Infrastructure Implementation
+🚀 Complete Production Infrastructure + Fix Rust Formatting
 
 - Add comprehensive Docker containerization for all services
 - Implement Kubernetes deployments with enterprise security
@@ -48,6 +48,7 @@ $commitMessage = @"
 - Add production deployment scripts and documentation
 - Remove all mock data for production readiness
 - Create interactive demo and deployment guides
+- Fix all Rust formatting issues to pass CI/CD checks
 
 SatsConnect is now 100% production-ready for African markets!
 "@

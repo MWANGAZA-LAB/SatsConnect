@@ -2,7 +2,7 @@ import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateToken } from '../middleware/auth';
 import { sanitizeError, createStrictRateLimit } from '../middleware/security';
-import mpesaService from '../services/mpesaService';
+import { mpesaService } from '../services/mpesaService';
 import airtimeService from '../services/airtimeService';
 import queueService from '../services/queueService';
 import walletService from '../services/walletService';
@@ -67,24 +67,44 @@ router.post(
         walletId,
       });
 
-      // Add job to queue for async processing
-      await queueService.addMpesaBuyJob({
-        transactionId,
+      // Initiate STK Push directly
+      const stkPushResult = await mpesaService.initiateStkPush({
         phoneNumber,
         amount,
         accountReference: accountReference || `SATS_${transactionId}`,
         transactionDesc: transactionDesc || 'Bitcoin Purchase',
-        walletId,
       });
 
-      res.status(202).json({
-        success: true,
-        data: {
+      if (stkPushResult.success) {
+        // Store transaction details for tracking
+        await queueService.addMpesaBuyJob({
           transactionId,
-          status: 'pending',
-          message: 'STK Push initiated. Please check your phone to complete the transaction.',
-        },
-      });
+          phoneNumber,
+          amount,
+          accountReference: accountReference || `SATS_${transactionId}`,
+          transactionDesc: transactionDesc || 'Bitcoin Purchase',
+          walletId,
+          merchantRequestID: stkPushResult.merchantRequestID,
+          checkoutRequestID: stkPushResult.checkoutRequestID,
+        });
+
+        res.status(200).json({
+          success: true,
+          data: {
+            transactionId,
+            merchantRequestID: stkPushResult.merchantRequestID,
+            checkoutRequestID: stkPushResult.checkoutRequestID,
+            status: 'pending',
+            message: stkPushResult.customerMessage,
+          },
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: stkPushResult.error || 'STK Push failed',
+          message: stkPushResult.customerMessage,
+        });
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('MPesa buy request failed:', { error: errorMessage });
@@ -305,19 +325,23 @@ router.get(
 
 // Get MPesa transaction limits
 router.get('/mpesa/limits', authenticateToken, (req: express.Request, res: express.Response) => {
+  const limits = mpesaService.getTransactionLimits();
+  
   res.json({
     success: true,
     data: {
       buy: {
-        minAmount: 1,
-        maxAmount: 150000,
-        currency: 'KES',
+        minAmount: limits.minAmount,
+        maxAmount: limits.maxAmount,
+        dailyLimit: limits.dailyLimit,
+        currency: limits.currency,
         description: 'MPesa STK Push limits for buying Bitcoin',
       },
       payout: {
-        minAmount: 1,
-        maxAmount: 150000,
-        currency: 'KES',
+        minAmount: limits.minAmount,
+        maxAmount: limits.maxAmount,
+        dailyLimit: limits.dailyLimit,
+        currency: limits.currency,
         description: 'MPesa payout limits for selling Bitcoin',
       },
     },

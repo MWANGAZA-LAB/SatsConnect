@@ -16,9 +16,18 @@ pub mod proto {
 pub mod bitcoin_client;
 pub mod config;
 pub mod lightning_engine;
+pub mod multi_currency;
 pub mod payment;
+pub mod performance;
 pub mod secure_storage;
 pub mod wallet;
+pub mod monitoring;
+pub mod lightning;
+pub mod notifications;
+pub mod lsp;
+pub mod security;
+pub mod ai;
+pub mod privacy;
 
 #[cfg(test)]
 mod tests {

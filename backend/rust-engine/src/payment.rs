@@ -32,10 +32,10 @@ impl PaymentHandler {
             .ok_or_else(|| anyhow::anyhow!("Failed to get project directories"))?;
         let data_dir = dirs.data_dir().to_path_buf();
         std::fs::create_dir_all(&data_dir)?;
-        
+
         // Initialize Lightning engine with testnet for development
         let lightning_engine = Arc::new(LightningEngine::new(data_dir, Network::Testnet));
-        
+
         Ok(Self {
             payments: Arc::new(RwLock::new(HashMap::new())),
             lightning_engine,
@@ -62,7 +62,7 @@ impl PaymentHandler {
 
         // Initialize Lightning engine if not already done
         self.lightning_engine.initialize().await?;
-        
+
         // Send payment using real Lightning engine
         let (payment_hash, status) = self.lightning_engine.send_payment(&invoice).await?;
 

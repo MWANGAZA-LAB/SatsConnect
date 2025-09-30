@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import mpesaService from '../services/mpesaService';
+import { mpesaService } from '../services/mpesaService';
+import { webhookProcessor } from '../services/webhookProcessor';
 import airtimeService from '../services/airtimeService';
 import walletService from '../services/walletService';
 import logger from '../utils/logger';
@@ -51,56 +52,24 @@ router.post(
         resultCode: callback.Body?.stkCallback?.ResultCode,
       });
 
-      // Validate callback signature
-      if (!mpesaService.validateCallback(callback as any, signature)) {
-        logger.warn('Invalid MPesa callback signature');
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid signature',
-        });
-      }
+      // Process callback using webhook processor
+      const result = await webhookProcessor.processMpesaCallback(callback as any, signature);
 
-      // Extract transaction details
-      const transactionDetails = mpesaService.extractTransactionDetails(callback as any);
-
-      logger.info('MPesa transaction details:', transactionDetails);
-
-      if (transactionDetails.resultCode === 0) {
-        // Transaction successful
-        logger.info('MPesa transaction successful:', {
-          mpesaReceiptNumber: transactionDetails.mpesaReceiptNumber,
-          amount: transactionDetails.amount,
-          phoneNumber: transactionDetails.phoneNumber,
-        });
-
-        // TODO: Process successful payment
-        // 1. Verify the payment with MPesa
-        // 2. Generate Lightning invoice for the equivalent BTC amount
-        // 3. Send BTC to user's wallet
-        // 4. Update transaction status in database
-        // 5. Send notification to user
-
-        // For now, just log the success
-        logger.info('MPesa payment processed successfully', {
-          checkoutRequestID: transactionDetails.checkoutRequestID,
-          amount: transactionDetails.amount,
-          mpesaReceiptNumber: transactionDetails.mpesaReceiptNumber,
+      if (result.success) {
+        logger.info('MPesa callback processed successfully:', {
+          transactionId: result.transactionId,
+          amountSats: result.amountSats,
+          amountKes: result.amountKes,
         });
       } else {
-        // Transaction failed
-        logger.warn('MPesa transaction failed:', {
-          resultCode: transactionDetails.resultCode,
-          resultDesc: transactionDetails.resultDesc,
-          checkoutRequestID: transactionDetails.checkoutRequestID,
+        logger.warn('MPesa callback processing failed:', {
+          error: result.error,
+          message: result.message,
         });
-
-        // TODO: Handle failed transaction
-        // 1. Update transaction status to failed
-        // 2. Send notification to user
-        // 3. Log the failure reason
       }
 
-      // Always respond with success to MPesa
+      // Always respond with success to MPesa (even if processing failed)
+      // MPesa will retry if we return an error status
       res.json({
         success: true,
         message: 'Callback processed',
@@ -147,50 +116,18 @@ router.post(
         provider: callback.provider,
       });
 
-      // Validate callback signature
-      if (!airtimeService.validateCallback(callback as any, signature)) {
-        logger.warn('Invalid airtime callback signature');
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid signature',
-        });
-      }
+      // Process callback using webhook processor
+      const result = await webhookProcessor.processAirtimeCallback(callback as any, signature);
 
-      if (callback.status === 'success') {
-        // Airtime purchase successful
-        logger.info('Airtime purchase successful:', {
+      if (result.success) {
+        logger.info('Airtime callback processed successfully:', {
           transactionId: callback.transactionId,
-          amount: callback.amount,
-          phoneNumber: callback.phoneNumber,
-          provider: callback.provider,
-        });
-
-        // TODO: Process successful airtime purchase
-        // 1. Verify the airtime was actually delivered
-        // 2. Process the Lightning payment
-        // 3. Update transaction status in database
-        // 4. Send notification to user
-
-        // For now, just log the success
-        logger.info('Airtime purchase processed successfully', {
-          transactionId: callback.transactionId,
-          amount: callback.amount,
-          phoneNumber: callback.phoneNumber,
-          provider: callback.provider,
         });
       } else {
-        // Airtime purchase failed
-        logger.warn('Airtime purchase failed:', {
-          transactionId: callback.transactionId,
-          status: callback.status,
-          message: callback.message,
+        logger.warn('Airtime callback processing failed:', {
+          error: result.error,
+          message: result.message,
         });
-
-        // TODO: Handle failed airtime purchase
-        // 1. Update transaction status to failed
-        // 2. Refund the Lightning payment if possible
-        // 3. Send notification to user
-        // 4. Log the failure reason
       }
 
       res.json({
@@ -226,41 +163,19 @@ router.post('/mpesa/payout', async (req: express.Request, res: express.Response)
       resultDesc: callback.ResultDesc,
     });
 
-    // Validate callback signature
-    if (!mpesaService.validateCallback(callback as any, signature)) {
-      logger.warn('Invalid MPesa payout callback signature');
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid signature',
-      });
-    }
+    // Process callback using webhook processor
+    const result = await webhookProcessor.processMpesaPayoutCallback(callback as any, signature);
 
-    if (callback.ResultCode === 0) {
-      // Payout successful
-      logger.info('MPesa payout successful:', {
+    if (result.success) {
+      logger.info('MPesa payout callback processed successfully:', {
         originatorConversationID: callback.OriginatorConversationID,
         conversationID: callback.ConversationID,
-        amount: (callback as any).ResultParameters?.ResultParameter?.[0]?.Value,
-        phoneNumber: (callback as any).ResultParameters?.ResultParameter?.[1]?.Value,
       });
-
-      // TODO: Process successful payout
-      // 1. Verify the payout with MPesa
-      // 2. Process the Lightning payment
-      // 3. Update transaction status in database
-      // 4. Send notification to user
     } else {
-      // Payout failed
-      logger.warn('MPesa payout failed:', {
-        resultCode: callback.ResultCode,
-        resultDesc: callback.ResultDesc,
-        originatorConversationID: callback.OriginatorConversationID,
+      logger.warn('MPesa payout callback processing failed:', {
+        error: result.error,
+        message: result.message,
       });
-
-      // TODO: Handle failed payout
-      // 1. Update transaction status to failed
-      // 2. Refund the Lightning payment if possible
-      // 3. Send notification to user
     }
 
     res.json({
