@@ -68,7 +68,7 @@ class SecureStorageService {
         deviceId = await Crypto.getRandomBytesAsync(32).then(bytes => 
           btoa(String.fromCharCode(...bytes))
         );
-        await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_ID, deviceId);
+        await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_ID, deviceId!);
       }
       this.deviceId = deviceId;
     } catch (error) {
@@ -84,9 +84,9 @@ class SecureStorageService {
         key = await Crypto.getRandomBytesAsync(32).then(bytes => 
           btoa(String.fromCharCode(...bytes))
         );
-        await SecureStore.setItemAsync(STORAGE_KEYS.ENCRYPTION_KEY, key);
+        await SecureStore.setItemAsync(STORAGE_KEYS.ENCRYPTION_KEY, key!);
       }
-      return key;
+      return key!;
     } catch (error) {
       console.error('Failed to get encryption key:', error);
       throw new Error('Encryption key not available');
@@ -429,7 +429,17 @@ class SecureStorageService {
   async updateSecuritySettings(updates: Partial<SecuritySettings>): Promise<boolean> {
     try {
       const currentSettings = await this.getSecuritySettings();
-      const newSettings = { ...currentSettings, ...updates };
+      const newSettings: SecuritySettings = { 
+        ...currentSettings, 
+        ...updates,
+        biometricEnabled: updates.biometricEnabled ?? currentSettings.biometricEnabled,
+        pinEnabled: updates.pinEnabled ?? currentSettings.pinEnabled,
+        autoLockTimeout: updates.autoLockTimeout ?? currentSettings.autoLockTimeout,
+        maxLoginAttempts: updates.maxLoginAttempts ?? currentSettings.maxLoginAttempts,
+        lockoutDuration: updates.lockoutDuration ?? currentSettings.lockoutDuration,
+        lastUnlockTime: updates.lastUnlockTime ?? currentSettings.lastUnlockTime,
+        failedAttempts: updates.failedAttempts ?? currentSettings.failedAttempts,
+      };
       return await this.saveSecuritySettings(newSettings);
     } catch (error) {
       console.error('Failed to update security settings:', error);

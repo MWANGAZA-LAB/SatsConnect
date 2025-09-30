@@ -1,0 +1,66 @@
+{{- if .Values.rustEngine.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "satsconnect.fullname" . }}-rust-engine
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "satsconnect.labels" . | nindent 4 }}
+    component: rust-engine
+spec:
+  type: {{ .Values.rustEngine.service.type }}
+  ports:
+  - port: {{ .Values.rustEngine.service.grpcPort }}
+    targetPort: {{ .Values.rustEngine.service.grpcPort }}
+    protocol: TCP
+    name: grpc
+  - port: {{ .Values.rustEngine.service.httpPort }}
+    targetPort: {{ .Values.rustEngine.service.httpPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "satsconnect.selectorLabels" . | nindent 4 }}
+    component: rust-engine
+{{- end }}
+
+{{- if .Values.apiGateway.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "satsconnect.fullname" . }}-api-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "satsconnect.labels" . | nindent 4 }}
+    component: api-gateway
+spec:
+  type: {{ .Values.apiGateway.service.type }}
+  ports:
+  - port: {{ .Values.apiGateway.service.port }}
+    targetPort: {{ .Values.apiGateway.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "satsconnect.selectorLabels" . | nindent 4 }}
+    component: api-gateway
+{{- end }}
+
+{{- if .Values.mobileApp.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "satsconnect.fullname" . }}-mobile-app
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "satsconnect.labels" . | nindent 4 }}
+    component: mobile-app
+spec:
+  type: {{ .Values.mobileApp.service.type }}
+  ports:
+  - port: {{ .Values.mobileApp.service.port }}
+    targetPort: {{ .Values.mobileApp.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "satsconnect.selectorLabels" . | nindent 4 }}
+    component: mobile-app
+{{- end }}

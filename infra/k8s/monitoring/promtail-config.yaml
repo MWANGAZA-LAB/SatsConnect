@@ -1,0 +1,157 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: satsconnect-production
+data:
+  promtail.yml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+    
+    positions:
+      filename: /tmp/positions.yaml
+    
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    
+    scrape_configs:
+      # Kubernetes pods logs
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_controller_name]
+            regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+            action: replace
+            target_label: __tmp_controller_name
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name, __meta_kubernetes_pod_label_app, __tmp_controller_name, __meta_kubernetes_pod_name]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component, __meta_kubernetes_pod_label_component]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: component
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance, __meta_kubernetes_pod_label_instance]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: instance
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_part_of, __meta_kubernetes_pod_label_part_of]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: part_of
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_managed_by, __meta_kubernetes_pod_label_managed_by]
+            regex: ^;*([^;]+)(;.*)?$
+            action: replace
+            target_label: managed_by
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: replace
+            target_label: __tmp_kubernetes_pod_label_name
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance]
+            action: replace
+            target_label: __tmp_kubernetes_pod_label_instance
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            action: replace
+            target_label: __tmp_kubernetes_pod_label_component
+          - source_labels: [__tmp_kubernetes_pod_label_name, __tmp_kubernetes_pod_label_instance, __tmp_kubernetes_pod_label_component]
+            regex: ^;*([^;]+)(;([^;]+))?(;([^;]+))?$
+            action: replace
+            target_label: __tmp_kubernetes_pod_label_combination
+            replacement: ${1}${2:+:${3}}${4:+:${5}}
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            action: replace
+            target_label: kubernetes_node
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: replace
+            target_label: kubernetes_container_name
+          - source_labels: [__meta_kubernetes_pod_uid]
+            action: replace
+            target_label: kubernetes_pod_uid
+          - source_labels: [__meta_kubernetes_pod_annotation_kubernetes_io_created_by]
+            action: replace
+            target_label: kubernetes_created_by
+          - source_labels: [__meta_kubernetes_pod_controller_name]
+            action: replace
+            target_label: kubernetes_controller_name
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            action: replace
+            target_label: kubernetes_node
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: replace
+            target_label: kubernetes_container_name
+          - source_labels: [__meta_kubernetes_pod_uid]
+            action: replace
+            target_label: kubernetes_pod_uid
+          - source_labels: [__meta_kubernetes_pod_annotation_kubernetes_io_created_by]
+            action: replace
+            target_label: kubernetes_created_by
+          - source_labels: [__meta_kubernetes_pod_controller_name]
+            action: replace
+            target_label: kubernetes_controller_name
+        pipeline_stages:
+          - cri: {}
+          - multiline:
+              firstline: '^\d{4}-\d{2}-\d{2}'
+              max_wait_time: 3s
+          - regex:
+              expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<level>\w+)\s+(?P<message>.*)'
+          - timestamp:
+              source: timestamp
+              format: RFC3339Nano
+          - labels:
+              level:
+              message:
+          - output:
+              source: message
+      
+      # System logs
+      - job_name: system
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: varlogs
+              __path__: /var/log/*log
+        pipeline_stages:
+          - multiline:
+              firstline: '^\d{4}-\d{2}-\d{2}'
+              max_wait_time: 3s
+          - regex:
+              expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<level>\w+)\s+(?P<message>.*)'
+          - timestamp:
+              source: timestamp
+              format: RFC3339Nano
+          - labels:
+              level:
+              message:
+          - output:
+              source: message

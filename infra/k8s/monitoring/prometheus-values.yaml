@@ -1,0 +1,148 @@
+# Prometheus Helm Chart Values
+prometheus:
+  prometheusSpec:
+    # Storage configuration
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: fast-ssd
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    
+    # Retention policy
+    retention: 30d
+    retentionSize: 10GB
+    
+    # Resource limits
+    resources:
+      requests:
+        memory: 2Gi
+        cpu: 1000m
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+    
+    # Service monitor configuration
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    
+    # Rule configuration
+    ruleSelectorNilUsesHelmValues: false
+    ruleSelector: {}
+    ruleNamespaceSelector: {}
+    
+    # Additional scrape configs
+    additionalScrapeConfigs:
+      - job_name: 'satsconnect-rust-engine'
+        static_configs:
+          - targets: ['satsconnect-rust-engine:8080']
+        metrics_path: '/metrics'
+        scrape_interval: 15s
+        
+      - job_name: 'satsconnect-api-gateway'
+        static_configs:
+          - targets: ['satsconnect-api-gateway:4000']
+        metrics_path: '/metrics'
+        scrape_interval: 15s
+        
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+# Grafana configuration
+grafana:
+  enabled: true
+  adminPassword: "admin"
+  
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: fast-ssd
+    size: 10Gi
+  
+  # Resource limits
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  
+  # Dashboard configuration
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'satsconnect-dashboards'
+        orgId: 1
+        folder: 'SatsConnect'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/satsconnect
+  
+  dashboards:
+    satsconnect:
+      satsconnect-overview:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+      satsconnect-lightning:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+      satsconnect-mpesa:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+
+# AlertManager configuration
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: fast-ssd
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+    
+    # Alert configuration
+    configSecret: "alertmanager-config"
+    
+    # Resource limits
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 200m

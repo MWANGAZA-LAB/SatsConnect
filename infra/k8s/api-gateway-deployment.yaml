@@ -1,0 +1,187 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: satsconnect-api-gateway
+  namespace: satsconnect-production
+  labels:
+    app: satsconnect-api-gateway
+    component: api-gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: satsconnect-api-gateway
+  template:
+    metadata:
+      labels:
+        app: satsconnect-api-gateway
+        component: api-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: satsconnect-api-gateway
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: api-gateway
+        image: satsconnect/api-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "4000"
+        - name: RUST_ENGINE_URL
+          value: "http://satsconnect-rust-engine:50051"
+        - name: BITCOIN_NETWORK
+          valueFrom:
+            configMapKeyRef:
+              name: satsconnect-config
+              key: bitcoin-network
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: jwt-secret
+        - name: MPESA_CONSUMER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: mpesa-consumer-key
+        - name: MPESA_CONSUMER_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: mpesa-consumer-secret
+        - name: MPESA_SHORTCODE
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: mpesa-shortcode
+        - name: MPESA_PASSKEY
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: mpesa-passkey
+        - name: COINMARKETCAP_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: coinmarketcap-api-key
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: api-gateway-logs
+          mountPath: /app/logs
+        - name: api-gateway-secrets
+          mountPath: /app/secrets
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: api-gateway-logs
+        emptyDir: {}
+      - name: api-gateway-secrets
+        secret:
+          secretName: api-gateway-secrets
+      nodeSelector:
+        kubernetes.io/os: linux
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: satsconnect-api-gateway
+  namespace: satsconnect-production
+  labels:
+    app: satsconnect-api-gateway
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 4000
+    protocol: TCP
+    name: http
+  selector:
+    app: satsconnect-api-gateway
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: satsconnect-api-gateway-ingress
+  namespace: satsconnect-production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+  - hosts:
+    - api.satsconnect.africa
+    secretName: satsconnect-api-tls
+  rules:
+  - host: api.satsconnect.africa
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: satsconnect-api-gateway
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: satsconnect-api-gateway
+  namespace: satsconnect-production
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-gateway-secrets
+  namespace: satsconnect-production
+type: Opaque
+data:
+  # Base64 encoded secrets - will be populated by CI/CD
+  jwt-secret: ""
+  mpesa-consumer-key: ""
+  mpesa-consumer-secret: ""
+  mpesa-shortcode: ""
+  mpesa-passkey: ""
+  coinmarketcap-api-key: ""

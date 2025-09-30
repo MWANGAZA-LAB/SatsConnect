@@ -21,6 +21,7 @@ import { sanitizeInput } from './middleware/security';
 import walletRoutes from './routes/walletRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import fiatRoutes from './routes/fiatRoutes';
+import bitcoinRoutes from './routes/bitcoinRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import healthRoutes from './routes/healthRoutes';
 
@@ -58,6 +59,7 @@ app.use('/health', healthRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/fiat', fiatRoutes);
+app.use('/api/bitcoin', bitcoinRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Root endpoint
@@ -72,6 +74,7 @@ app.get('/', (req, res) => {
       wallet: '/api/wallet',
       payments: '/api/payments',
       fiat: '/api/fiat',
+      bitcoin: '/api/bitcoin',
       webhooks: '/webhook',
     },
     documentation: {
@@ -94,6 +97,16 @@ app.get('/', (req, res) => {
         transactionStatus: 'GET /api/fiat/transaction/:id',
         providers: 'GET /api/fiat/airtime/providers',
         limits: 'GET /api/fiat/mpesa/limits',
+      },
+      bitcoin: {
+        exchangeRate: 'GET /api/bitcoin/exchange-rate',
+        convertKesToSats: 'POST /api/bitcoin/convert/kes-to-sats',
+        convertSatsToKes: 'POST /api/bitcoin/convert/sats-to-kes',
+        credit: 'POST /api/bitcoin/credit',
+        purchaseAirtime: 'POST /api/bitcoin/purchase-airtime',
+        balance: 'GET /api/bitcoin/balance/:walletAddress',
+        transactions: 'GET /api/bitcoin/transactions/:walletAddress',
+        status: 'GET /api/bitcoin/status',
       },
       webhooks: {
         mpesa: 'POST /webhook/mpesa',

@@ -292,7 +292,7 @@ export const PINEntry: React.FC<PINEntryProps> = ({
             
             <TouchableOpacity
               style={styles.keypadButton}
-              onPress={handleNumberPress('0')}
+              onPress={() => handleNumberPress('0')}
               disabled={isLocked || getDisplayPin().length >= 6}
             >
               <Text style={styles.keypadText}>0</Text>

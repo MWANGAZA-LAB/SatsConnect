@@ -1,6 +1,8 @@
 use crate::secure_storage::SecureStorage;
+use crate::lightning_engine::LightningEngine;
 use anyhow::Result;
 use bip39::{Language, Mnemonic};
+use bitcoin::Network;
 use directories::ProjectDirs;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -20,6 +22,7 @@ pub struct WalletHandler {
     wallets: Arc<RwLock<HashMap<String, Wallet>>>,
     current_wallet: Arc<RwLock<Option<String>>>,
     secure_storage: Arc<SecureStorage>,
+    lightning_engine: Arc<LightningEngine>,
 }
 
 impl WalletHandler {
@@ -29,12 +32,16 @@ impl WalletHandler {
         let data_dir = dirs.data_dir().to_path_buf();
         std::fs::create_dir_all(&data_dir)?;
 
-        let secure_storage = Arc::new(SecureStorage::new(data_dir)?);
+        let secure_storage = Arc::new(SecureStorage::new(data_dir.clone())?);
+        
+        // Initialize Lightning engine with testnet for development
+        let lightning_engine = Arc::new(LightningEngine::new(data_dir, Network::Testnet));
 
         Ok(Self {
             wallets: Arc::new(RwLock::new(HashMap::new())),
             current_wallet: Arc::new(RwLock::new(None)),
             secure_storage,
+            lightning_engine,
         })
     }
 
@@ -76,8 +83,14 @@ impl WalletHandler {
         };
 
         let wallet_id = uuid::Uuid::new_v4().to_string();
-        let node_id = Self::generate_node_id(&mnemonic);
-        let address = Self::generate_address(&mnemonic);
+        
+        // Initialize Lightning engine if not already done
+        self.lightning_engine.initialize().await?;
+        
+        // Create wallet using real Lightning engine
+        let (node_id, address) = self.lightning_engine
+            .create_wallet_from_mnemonic(&mnemonic, &label)
+            .await?;
 
         // Store mnemonic securely
         self.secure_storage.store_mnemonic(&wallet_id, &mnemonic)?;
@@ -111,10 +124,8 @@ impl WalletHandler {
             .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
-        // Mock balances - return some test values
-        let onchain = 1000000; // 1M sats
-        let ln = 500000; // 500K sats
-        Ok((onchain, ln))
+        // Get real balances from Lightning engine
+        self.lightning_engine.get_balance().await
     }
 
     pub async fn generate_invoice(
@@ -133,13 +144,8 @@ impl WalletHandler {
             .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
-        // Mock Lightning invoice generation
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(format!("{}{}", amount_sats, memo).as_bytes());
-        let payment_hash = format!("{:x}", hasher.finalize());
-        let invoice = format!("lnbc{}u1p3k2v5cpp5{}", amount_sats, payment_hash);
-        Ok((invoice, payment_hash))
+        // Generate real Lightning invoice
+        self.lightning_engine.generate_invoice(amount_sats, &memo).await
     }
 
     pub async fn send_payment(&self, invoice: String) -> Result<(String, String)> {
@@ -154,17 +160,8 @@ impl WalletHandler {
             .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
-        // Mock payment processing
-        if !invoice.starts_with("lnbc") {
-            return Err(anyhow::anyhow!("Invalid Lightning invoice format"));
-        }
-
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(invoice.as_bytes());
-        let payment_hash = format!("{:x}", hasher.finalize());
-        let status = "SUCCEEDED".to_string();
-        Ok((payment_hash, status))
+        // Send real Lightning payment
+        self.lightning_engine.send_payment(&invoice).await
     }
 
     pub async fn buy_airtime(
@@ -184,14 +181,7 @@ impl WalletHandler {
             .get(wallet_name)
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
-        // Mock airtime purchase - create an invoice for airtime
-        let memo = format!(
-            "Airtime for {} via {}",
-            phone_number,
-            provider.unwrap_or_else(|| "default".to_string())
-        );
-        let (invoice, payment_hash) = self.generate_invoice(amount_sats, memo).await?;
-
-        Ok((invoice, payment_hash, "PENDING".to_string()))
+        // Buy airtime using real Lightning engine
+        self.lightning_engine.buy_airtime(amount_sats, &phone_number, provider.as_deref()).await
     }
 }

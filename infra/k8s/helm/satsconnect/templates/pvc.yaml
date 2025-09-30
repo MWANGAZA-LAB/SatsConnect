@@ -1,0 +1,21 @@
+{{- if and .Values.rustEngine.enabled .Values.rustEngine.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "satsconnect.fullname" . }}-rust-engine-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "satsconnect.labels" . | nindent 4 }}
+    component: rust-engine
+spec:
+  accessModes:
+    {{- range .Values.rustEngine.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.rustEngine.persistence.size | quote }}
+  {{- if .Values.rustEngine.persistence.storageClass }}
+  storageClassName: {{ .Values.rustEngine.persistence.storageClass }}
+  {{- end }}
+{{- end }}

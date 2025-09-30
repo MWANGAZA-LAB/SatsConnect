@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: satsconnect-rust-engine
+  namespace: satsconnect-production
+  labels:
+    app: satsconnect-rust-engine
+    component: lightning-engine
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: satsconnect-rust-engine
+  template:
+    metadata:
+      labels:
+        app: satsconnect-rust-engine
+        component: lightning-engine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: satsconnect-rust-engine
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: rust-engine
+        image: satsconnect/rust-engine:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50051
+          name: grpc
+          protocol: TCP
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: BITCOIN_NETWORK
+          valueFrom:
+            configMapKeyRef:
+              name: satsconnect-config
+              key: bitcoin-network
+        - name: DATA_DIR
+          value: "/app/data"
+        - name: GRPC_PORT
+          value: "50051"
+        - name: HTTP_PORT
+          value: "8080"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: rust-engine-data
+          mountPath: /app/data
+        - name: rust-engine-secrets
+          mountPath: /app/secrets
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: rust-engine-data
+        persistentVolumeClaim:
+          claimName: rust-engine-pvc
+      - name: rust-engine-secrets
+        secret:
+          secretName: rust-engine-secrets
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: satsconnect-rust-engine
+  namespace: satsconnect-production
+  labels:
+    app: satsconnect-rust-engine
+spec:
+  type: ClusterIP
+  ports:
+  - port: 50051
+    targetPort: 50051
+    protocol: TCP
+    name: grpc
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: satsconnect-rust-engine
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rust-engine-pvc
+  namespace: satsconnect-production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: satsconnect-rust-engine
+  namespace: satsconnect-production
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rust-engine-secrets
+  namespace: satsconnect-production
+type: Opaque
+data:
+  # Base64 encoded secrets - will be populated by CI/CD
+  bitcoin-rpc-url: ""
+  bitcoin-rpc-user: ""
+  bitcoin-rpc-password: ""

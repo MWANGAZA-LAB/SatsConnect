@@ -12,10 +12,10 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let wallet_handler = Arc::new(WalletHandler::new()?);
-    let payment_handler = Arc::new(PaymentHandler::new());
+    let payment_handler = Arc::new(PaymentHandler::new()?);
 
     println!("🚀 SatsConnect Rust Engine starting...");
-    println!("📊 Mock Lightning Engine initialized");
+    println!("⚡ Real Lightning Engine initialized with LDK-node");
 
     // Create gRPC services
     let wallet_service =

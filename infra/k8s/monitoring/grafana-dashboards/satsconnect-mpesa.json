@@ -1,0 +1,100 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SatsConnect MPesa Integration",
+    "tags": ["satsconnect", "mpesa"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "MPesa Transactions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "mpesa_transactions_total",
+            "legendFormat": "Total Transactions"
+          },
+          {
+            "expr": "mpesa_transactions_successful_total",
+            "legendFormat": "Successful Transactions"
+          },
+          {
+            "expr": "mpesa_transactions_failed_total",
+            "legendFormat": "Failed Transactions"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "MPesa Transaction Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(mpesa_transactions_total[5m])",
+            "legendFormat": "Transactions/sec"
+          },
+          {
+            "expr": "rate(mpesa_stk_push_total[5m])",
+            "legendFormat": "STK Push/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "MPesa Success Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(mpesa_transactions_successful_total[5m]) / rate(mpesa_transactions_total[5m]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "MPesa Transaction Amounts",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(mpesa_transaction_amount_bucket[5m]))",
+            "legendFormat": "95th percentile (KES)"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(mpesa_transaction_amount_bucket[5m]))",
+            "legendFormat": "50th percentile (KES)"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

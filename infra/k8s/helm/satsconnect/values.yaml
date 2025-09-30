@@ -1,0 +1,200 @@
+# SatsConnect Helm Chart Values
+
+# Global configuration
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets: []
+  storageClass: fast-ssd
+
+# Rust Lightning Engine configuration
+rustEngine:
+  enabled: true
+  image:
+    repository: satsconnect/rust-engine
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 3
+  service:
+    type: ClusterIP
+    port: 50051
+    grpcPort: 50051
+    httpPort: 8080
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: fast-ssd
+  env:
+    RUST_LOG: info
+    BITCOIN_NETWORK: testnet
+    DATA_DIR: /app/data
+    GRPC_PORT: 50051
+    HTTP_PORT: 8080
+
+# API Gateway configuration
+apiGateway:
+  enabled: true
+  image:
+    repository: satsconnect/api-gateway
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 3
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 4000
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: api.satsconnect.africa
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: satsconnect-api-tls
+        hosts:
+          - api.satsconnect.africa
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+  env:
+    NODE_ENV: production
+    PORT: 4000
+    RUST_ENGINE_URL: http://satsconnect-rust-engine:50051
+    BITCOIN_NETWORK: testnet
+
+# Mobile App configuration
+mobileApp:
+  enabled: true
+  image:
+    repository: satsconnect/mobile-app
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 19000
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  env:
+    EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+    API_BASE_URL: http://satsconnect-api-gateway:4000
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    retention: 30d
+    retentionSize: 10GB
+    resources:
+      requests:
+        memory: 2Gi
+        cpu: 1000m
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+    storage:
+      size: 50Gi
+      storageClass: fast-ssd
+  grafana:
+    enabled: true
+    adminPassword: admin
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    storage:
+      size: 10Gi
+      storageClass: fast-ssd
+    dashboards:
+      satsconnect-overview:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+      satsconnect-lightning:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+      satsconnect-mpesa:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+  loki:
+    enabled: true
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    storage:
+      size: 10Gi
+      storageClass: fast-ssd
+
+# Alerting configuration
+alerting:
+  enabled: true
+  slack:
+    webhookUrl: ""
+  pagerduty:
+    integrationKey: ""
+
+# Security configuration
+security:
+  podSecurityPolicy:
+    enabled: true
+  networkPolicy:
+    enabled: true
+  serviceAccount:
+    create: true
+    annotations: {}
+
+# Secrets configuration
+secrets:
+  create: true
+  rustEngine:
+    bitcoinRpcUrl: ""
+    bitcoinRpcUser: ""
+    bitcoinRpcPassword: ""
+  apiGateway:
+    jwtSecret: ""
+    mpesaConsumerKey: ""
+    mpesaConsumerSecret: ""
+    mpesaShortcode: ""
+    mpesaPasskey: ""
+    coinmarketcapApiKey: ""
+
+# ConfigMap configuration
+configMap:
+  create: true
+  data:
+    bitcoin-network: testnet
+    log-level: info
+    rate-limit-window-ms: "900000"
+    rate-limit-max-requests: "100"

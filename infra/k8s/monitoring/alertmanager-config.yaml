@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: satsconnect-production
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alerts@satsconnect.africa'
+    
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'web.hook'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+      - match:
+          severity: warning
+        receiver: 'warning-alerts'
+    
+    receivers:
+    - name: 'web.hook'
+      webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
+    
+    - name: 'critical-alerts'
+      slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#satsconnect-alerts'
+        title: '🚨 SatsConnect Critical Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        send_resolved: true
+      pagerduty_configs:
+      - routing_key: '${PAGERDUTY_INTEGRATION_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+    
+    - name: 'warning-alerts'
+      slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#satsconnect-warnings'
+        title: '⚠️ SatsConnect Warning'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        send_resolved: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: satsconnect-production
+data:
+  satsconnect-rules.yml: |
+    groups:
+    - name: satsconnect.rules
+      rules:
+      # Service availability alerts
+      - alert: SatsConnectRustEngineDown
+        expr: up{job="satsconnect-rust-engine"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SatsConnect Rust Engine is down"
+          description: "The Rust Lightning Engine has been down for more than 1 minute."
+      
+      - alert: SatsConnectAPIGatewayDown
+        expr: up{job="satsconnect-api-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SatsConnect API Gateway is down"
+          description: "The API Gateway has been down for more than 1 minute."
+      
+      # Performance alerts
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 10% for more than 2 minutes."
+      
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is above 2 seconds."
+      
+      # Lightning Network alerts
+      - alert: LightningChannelsDown
+        expr: lightning_channels_active / lightning_channels_total < 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low Lightning channel availability"
+          description: "Less than 50% of Lightning channels are active."
+      
+      - alert: LightningPaymentFailures
+        expr: rate(lightning_payments_failed_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Lightning payment failure rate"
+          description: "Lightning payment failure rate is above 10%."
+      
+      # MPesa integration alerts
+      - alert: MpesaTransactionFailures
+        expr: rate(mpesa_transactions_failed_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High MPesa transaction failure rate"
+          description: "MPesa transaction failure rate is above 5%."
+      
+      - alert: MpesaSTKPushFailures
+        expr: rate(mpesa_stk_push_failed_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High MPesa STK Push failure rate"
+          description: "MPesa STK Push failure rate is above 10%."
+      
+      # Resource alerts
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes."
+      
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 80% for more than 5 minutes."
+      
+      # Disk space alerts
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10%."

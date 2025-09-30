@@ -793,9 +793,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.spacing.sm,
     alignItems: 'center',
   },
-  copyButton: {
-    backgroundColor: theme.colors.gray100,
-  },
   qrButton: {
     backgroundColor: theme.colors.primary + '20',
   },

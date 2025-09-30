@@ -45,6 +45,16 @@ export interface Config {
     chimoneySubKey: string;
     webhookUrl: string;
   };
+  bitcoin: {
+    rpcUrl: string;
+    rpcUser: string;
+    rpcPassword: string;
+    network: 'mainnet' | 'testnet' | 'regtest';
+  };
+  exchangeRates: {
+    coinMarketCapApiKey: string;
+    cacheDuration: number;
+  };
   redis: {
     url: string;
     password?: string;
@@ -95,6 +105,16 @@ const config: Config = {
     chimoneyApiKey: process.env.CHIMONEY_API_KEY || '',
     chimoneySubKey: process.env.CHIMONEY_SUB_KEY || '',
     webhookUrl: process.env.CHIMONEY_WEBHOOK_URL || 'https://your-domain.com/webhook/airtime',
+  },
+  bitcoin: {
+    rpcUrl: process.env.BITCOIN_RPC_URL || 'http://127.0.0.1:18332',
+    rpcUser: process.env.BITCOIN_RPC_USER || 'user',
+    rpcPassword: process.env.BITCOIN_RPC_PASSWORD || 'password',
+    network: (process.env.BITCOIN_NETWORK as 'mainnet' | 'testnet' | 'regtest') || 'testnet',
+  },
+  exchangeRates: {
+    coinMarketCapApiKey: process.env.COINMARKETCAP_API_KEY || '',
+    cacheDuration: parseInt(process.env.EXCHANGE_RATE_CACHE_DURATION || '300000', 10), // 5 minutes
   },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',

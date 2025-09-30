@@ -1,0 +1,284 @@
+name: SatsConnect CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Security scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Rust backend tests
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          backend/rust-engine/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Run Rust tests
+      working-directory: backend/rust-engine
+      run: |
+        cargo test --verbose
+        cargo clippy -- -D warnings
+        cargo fmt -- --check
+        
+    - name: Build Rust Docker image
+      run: |
+        docker build -f infra/docker/backend-rust.Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/rust-engine:${{ github.sha }} .
+
+  # Node.js API gateway tests
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/node-orchestrator/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: backend/node-orchestrator
+      run: npm ci
+      
+    - name: Run linting
+      working-directory: backend/node-orchestrator
+      run: npm run lint
+      
+    - name: Run tests
+      working-directory: backend/node-orchestrator
+      run: npm test
+      
+    - name: Build Node.js Docker image
+      run: |
+        docker build -f infra/docker/api-gateway.Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-gateway:${{ github.sha }} .
+
+  # Mobile app tests
+  mobile-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: mobile/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: mobile
+      run: npm ci
+      
+    - name: Run linting
+      working-directory: mobile
+      run: npm run lint
+      
+    - name: Run tests
+      working-directory: mobile
+      run: npm test
+      
+    - name: Build Mobile Docker image
+      run: |
+        docker build -f infra/docker/mobile-app.Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/mobile-app:${{ github.sha }} .
+
+  # Integration tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [rust-tests, node-tests, mobile-tests]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Start services with Docker Compose
+      run: |
+        docker-compose -f infra/docker/docker-compose.yml up -d
+        
+    - name: Wait for services to be ready
+      run: |
+        sleep 30
+        curl -f http://localhost:50051/health || exit 1
+        curl -f http://localhost:4000/health || exit 1
+        
+    - name: Run integration tests
+      run: |
+        # Add integration test commands here
+        echo "Running integration tests..."
+        
+    - name: Stop services
+      if: always()
+      run: |
+        docker-compose -f infra/docker/docker-compose.yml down
+
+  # Build and push images
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: [security-scan, rust-tests, node-tests, mobile-tests, integration-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/rust-engine
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-gateway
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/mobile-app
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push Rust engine
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: infra/docker/backend-rust.Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/rust-engine:${{ github.sha }}
+        labels: ${{ steps.meta.outputs.labels }}
+        
+    - name: Build and push API gateway
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: infra/docker/api-gateway.Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-gateway:${{ github.sha }}
+        labels: ${{ steps.meta.outputs.labels }}
+        
+    - name: Build and push Mobile app
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: infra/docker/mobile-app.Dockerfile
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/mobile-app:${{ github.sha }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  # Deploy to staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+        
+    - name: Deploy to staging
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl apply -f infra/k8s/rust-engine-deployment.yaml
+        kubectl apply -f infra/k8s/api-gateway-deployment.yaml
+        kubectl set image deployment/satsconnect-rust-engine satsconnect-rust-engine=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/rust-engine:${{ github.sha }} -n satsconnect-staging
+        kubectl set image deployment/satsconnect-api-gateway satsconnect-api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-gateway:${{ github.sha }} -n satsconnect-staging
+        kubectl rollout status deployment/satsconnect-rust-engine -n satsconnect-staging
+        kubectl rollout status deployment/satsconnect-api-gateway -n satsconnect-staging
+
+  # Deploy to production (manual approval required)
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+        
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+        
+    - name: Deploy to production
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl apply -f infra/k8s/rust-engine-deployment.yaml
+        kubectl apply -f infra/k8s/api-gateway-deployment.yaml
+        kubectl set image deployment/satsconnect-rust-engine satsconnect-rust-engine=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/rust-engine:${{ github.sha }} -n satsconnect-production
+        kubectl set image deployment/satsconnect-api-gateway satsconnect-api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api-gateway:${{ github.sha }} -n satsconnect-production
+        kubectl rollout status deployment/satsconnect-rust-engine -n satsconnect-production
+        kubectl rollout status deployment/satsconnect-api-gateway -n satsconnect-production
+        
+    - name: Notify deployment success
+      if: success()
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"🚀 SatsConnect production deployment successful!"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+          
+    - name: Notify deployment failure
+      if: failure()
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ SatsConnect production deployment failed!"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}

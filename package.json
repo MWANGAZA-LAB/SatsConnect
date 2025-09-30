@@ -8,9 +8,9 @@
     "mobile"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:rust\" \"npm run dev:node\" \"npm run dev:mobile\"",
-    "dev:rust": "cd backend\\rust-engine && cargo run --bin engine_server",
-    "dev:node": "cd backend\\node-orchestrator && npm run dev",
+    "dev": "concurrently --kill-others-on-fail \"npm run dev:rust\" \"npm run dev:node\" \"npm run dev:mobile\"",
+    "dev:rust": "cd backend/rust-engine && cargo run --bin engine_server",
+    "dev:node": "cd backend/node-orchestrator && npm run dev",
     "dev:mobile": "cd mobile && npx expo start",
     "build": "npm run build:rust && npm run build:node && npm run build:mobile",
     "build:rust": "cd backend/rust-engine && cargo build --release",
@@ -21,9 +21,12 @@
     "test:node": "cd backend/node-orchestrator && npm test",
     "test:mobile": "cd mobile && npm test",
     "install:all": "npm install && cd backend/node-orchestrator && npm install && cd ../../mobile && npm install",
-    "start:rust": "cd backend/rust-engine && .\\target\\release\\engine_server.exe",
+    "start:rust": "cd backend/rust-engine && cargo run --bin engine_server",
     "start:node": "cd backend/node-orchestrator && npm start",
-    "start:mobile": "cd mobile && npx expo start"
+    "start:mobile": "cd mobile && npx expo start",
+    "demo": "node demo-mock.js",
+    "demo:api": "node demo-satsconnect.js",
+    "demo:html": "start demo.html"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

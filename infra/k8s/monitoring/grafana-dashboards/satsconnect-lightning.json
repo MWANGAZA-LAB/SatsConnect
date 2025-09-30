@@ -1,0 +1,104 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "SatsConnect Lightning Network",
+    "tags": ["satsconnect", "lightning"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Lightning Channels",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "lightning_channels_total",
+            "legendFormat": "Total Channels"
+          },
+          {
+            "expr": "lightning_channels_active",
+            "legendFormat": "Active Channels"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Lightning Payments",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(lightning_payments_total[5m])",
+            "legendFormat": "Payments/sec"
+          },
+          {
+            "expr": "rate(lightning_payments_successful_total[5m])",
+            "legendFormat": "Successful Payments/sec"
+          },
+          {
+            "expr": "rate(lightning_payments_failed_total[5m])",
+            "legendFormat": "Failed Payments/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Lightning Balance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "lightning_balance_sats",
+            "legendFormat": "Lightning Balance (sats)"
+          },
+          {
+            "expr": "lightning_balance_confirmed_sats",
+            "legendFormat": "Confirmed Balance (sats)"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Lightning Invoice Generation",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(lightning_invoices_generated_total[5m])",
+            "legendFormat": "Invoices Generated/sec"
+          },
+          {
+            "expr": "rate(lightning_invoices_paid_total[5m])",
+            "legendFormat": "Invoices Paid/sec"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+}

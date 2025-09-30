@@ -17,6 +17,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { theme } from '../theme';
 import { walletService } from '../services/walletService';
 import { authService } from '../services/authService';
+import { apiService } from '../services/api';
 
 type HomeNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -30,8 +31,8 @@ export default function Home() {
   const [selectedCurrency, setSelectedCurrency] = useState<'BTC' | 'KES' | 'USD'>('BTC');
   const [exchangeRates, setExchangeRates] = useState({
     BTC: 1,
-    KES: 4000000, // Mock rate: 1 BTC = 4M KES
-    USD: 40000,   // Mock rate: 1 BTC = 40K USD
+    KES: 0, // Will be fetched from API
+    USD: 0, // Will be fetched from API
   });
 
   useFocusEffect(
@@ -42,8 +43,24 @@ export default function Home() {
 
   useEffect(() => {
     const unsubscribe = walletService.subscribe(setWalletState);
+    fetchExchangeRates();
     return unsubscribe;
   }, []);
+
+  const fetchExchangeRates = async () => {
+    try {
+      const response = await apiService.getExchangeRate();
+      if (response.success && response.data) {
+        setExchangeRates({
+          BTC: 1,
+          KES: response.data.rate,
+          USD: response.data.rate / 100, // Approximate USD rate
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch exchange rates:', error);
+    }
+  };
 
   const refreshWallet = async () => {
     setIsRefreshing(true);

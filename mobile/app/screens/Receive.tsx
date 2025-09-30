@@ -21,6 +21,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { QRCodeComponent } from '../components/QRCode';
 import { theme } from '../theme';
 import { walletService } from '../services/walletService';
+import { apiService } from '../services/api';
 
 type ReceiveNavigationProp = StackNavigationProp<RootStackParamList, 'Receive'>;
 
@@ -31,6 +32,30 @@ export default function Receive() {
   const [invoice, setInvoice] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [exchangeRates, setExchangeRates] = useState({
+    BTC: 1,
+    KES: 0, // Will be fetched from API
+    USD: 0, // Will be fetched from API
+  });
+
+  useEffect(() => {
+    fetchExchangeRates();
+  }, []);
+
+  const fetchExchangeRates = async () => {
+    try {
+      const response = await apiService.getExchangeRate();
+      if (response.success && response.data) {
+        setExchangeRates({
+          BTC: 1,
+          KES: response.data.rate,
+          USD: response.data.rate / 100, // Approximate USD rate
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch exchange rates:', error);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -119,7 +144,7 @@ export default function Receive() {
   const formatKES = (sats: number) => {
     // Mock conversion rate: 1 BTC = 4,000,000 KES
     const btc = sats / 100000000;
-    const kes = btc * 4000000;
+    const kes = btc * (exchangeRates.KES || 4000000); // Fallback to 4M KES if rate not loaded
     return `≈ ${kes.toFixed(0)} KES`;
   };
 

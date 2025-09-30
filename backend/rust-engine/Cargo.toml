@@ -39,9 +39,13 @@ tonic = { version = "0.12", features = ["transport"] }
 prost = "0.13"
 prost-types = "0.13"
 
-# Lightning Node (LDK Node) - temporarily disabled due to prost conflicts
-# ldk-node = "0.6"
-# bitcoin = "0.32"
+# Lightning Node (LDK Node) - enabled with compatible versions
+ldk-node = "0.6"
+bitcoin = "0.32"
+lightning = "0.0.120"
+lightning-persister = "0.0.120"
+lightning-rapid-gossip-sync = "0.0.120"
+lightning-invoice = "0.0.120"
 
 # Crypto/seed
 bip39 = { version = "2", default-features = false, features = ["std", "rand"] }
@@ -49,6 +53,7 @@ rand = "0.8"
 sha2 = "0.10"
 aes-gcm = "0.10"
 base64 = "0.22"
+argon2 = "0.5"
 
 # Filesystem
 directories = "5"
@@ -57,16 +62,26 @@ directories = "5"
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 
+# Bitcoin and Lightning dependencies
+bitcoincore-rpc = "0.19"
+bitcoincore-rpc-json = "0.19"
+secp256k1 = { version = "0.28", features = ["rand", "recovery"] }
+bip32 = "0.5"
+
+# Network and async
+reqwest = { version = "0.11", features = ["json"] }
+tokio-tungstenite = "0.20"
+
 [build-dependencies]
 tonic-build = "0.12" 
 protoc-bin-vendored = "3"
 prost = "0.13"
 prost-types = "0.13"
 
-# Temporarily disabled due to prost conflicts
-# [package.metadata.tonic-build]
-# protos = ["proto/wallet.proto"]
-# out-dir = "src/proto"
+# Proto generation configuration
+[package.metadata.tonic-build]
+protos = ["proto/wallet.proto", "proto/payment.proto"]
+out-dir = "src/proto"
 
 [features]
 # Choose network via feature flags; default to testnet

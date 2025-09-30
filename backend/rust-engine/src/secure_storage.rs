@@ -1,11 +1,15 @@
 use aes_gcm::aead::Aead;
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use anyhow::Result;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use argon2::password_hash::{rand_core::OsRng, SaltString};
 use base64::{engine::general_purpose, Engine as _};
 use rand::Rng;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct SecureStorage {
@@ -23,15 +27,35 @@ impl SecureStorage {
     }
 
     fn derive_key(data_dir: &std::path::Path) -> Result<[u8; 32]> {
-        // In production, this should use a proper key derivation function
-        // For now, we'll derive from the data directory path
-        let mut hasher = Sha256::new();
-        hasher.update(data_dir.to_string_lossy().as_bytes());
-        hasher.update(b"satsconnect_secret_salt");
-        let hash = hasher.finalize();
-
+        // Use Argon2 for secure key derivation
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
+        
+        // Create password from data directory path and additional entropy
+        let password = format!("{}{}", data_dir.to_string_lossy(), "satsconnect_secret_salt");
+        
+        // Hash the password
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)
+            .map_err(|e| anyhow::anyhow!("Key derivation failed: {}", e))?;
+        
+        // Extract the hash bytes
+        let hash_bytes = password_hash.hash.unwrap().as_bytes();
+        
+        // Ensure we have exactly 32 bytes
         let mut key = [0u8; 32];
-        key.copy_from_slice(&hash);
+        let copy_len = std::cmp::min(32, hash_bytes.len());
+        key[..copy_len].copy_from_slice(&hash_bytes[..copy_len]);
+        
+        // If the hash is shorter than 32 bytes, extend it
+        if copy_len < 32 {
+            let mut hasher = Sha256::new();
+            hasher.update(&key[..copy_len]);
+            hasher.update(b"additional_entropy");
+            let extended_hash = hasher.finalize();
+            key[copy_len..].copy_from_slice(&extended_hash[..32-copy_len]);
+        }
+        
         Ok(key)
     }
 
