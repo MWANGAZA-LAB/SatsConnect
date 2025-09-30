@@ -32,7 +32,7 @@ async fn test_lightning_engine_integration() -> Result<()> {
         "✅ Balance retrieved - On-chain: {} sats, Lightning: {} sats",
         onchain_balance, lightning_balance
     );
-    
+
     // Test invoice generation
     let (invoice, payment_hash) = engine.generate_invoice(1000, "Test invoice").await?;
     assert!(!invoice.is_empty());
@@ -73,7 +73,7 @@ async fn test_wallet_handler_integration() -> Result<()> {
         "✅ Wallet handler balance - On-chain: {} sats, Lightning: {} sats",
         onchain_balance, lightning_balance
     );
-    
+
     // Test invoice generation
     let (invoice, payment_hash) = wallet_handler
         .generate_invoice(1000, "Test invoice".to_string())
