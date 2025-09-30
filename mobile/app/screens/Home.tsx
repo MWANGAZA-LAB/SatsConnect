@@ -119,6 +119,14 @@ export default function Home() {
     navigation.navigate('Receive');
   };
 
+  const handleBuyBitcoin = () => {
+    navigation.navigate('BuyBitcoin');
+  };
+
+  const handleSellBitcoin = () => {
+    navigation.navigate('SellBitcoin');
+  };
+
   const handleHistory = () => {
     navigation.navigate('History');
   };
@@ -285,6 +293,22 @@ export default function Home() {
             >
               <Text style={styles.actionIcon}>📥</Text>
               <Text style={styles.actionLabel}>Receive</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.buyButton]}
+              onPress={handleBuyBitcoin}
+            >
+              <Text style={styles.actionIcon}>💰</Text>
+              <Text style={styles.actionLabel}>Buy BTC</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.sellButton]}
+              onPress={handleSellBitcoin}
+            >
+              <Text style={styles.actionIcon}>💸</Text>
+              <Text style={styles.actionLabel}>Sell BTC</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -542,6 +566,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.md,
     ...theme.shadows.small,
+  },
+  buyButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  sellButton: {
+    backgroundColor: theme.colors.success,
   },
   actionIcon: {
     fontSize: 32,

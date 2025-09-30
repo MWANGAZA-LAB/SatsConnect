@@ -9,6 +9,8 @@ import Receive from './screens/Receive';
 import History from './screens/History';
 import Airtime from './screens/Airtime';
 import BillPayment from './screens/BillPayment';
+import BuyBitcoin from './screens/BuyBitcoin';
+import SellBitcoin from './screens/SellBitcoin';
 import { authService } from './services/authService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { theme } from './theme';
@@ -21,6 +23,8 @@ export type RootStackParamList = {
   History: undefined;
   Airtime: undefined;
   BillPayment: undefined;
+  BuyBitcoin: undefined;
+  SellBitcoin: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -122,6 +126,22 @@ export default function App() {
           component={BillPayment}
           options={{
             title: 'Pay Bills',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="BuyBitcoin"
+          component={BuyBitcoin}
+          options={{
+            title: 'Buy Bitcoin',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="SellBitcoin"
+          component={SellBitcoin}
+          options={{
+            title: 'Sell Bitcoin',
             presentation: 'modal',
           }}
         />

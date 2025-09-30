@@ -49,6 +49,59 @@ export interface TransactionData {
   payment_hash?: string;
 }
 
+export interface ExchangeRateData {
+  rate: number;
+  currency: string;
+  timestamp: string;
+}
+
+export interface MpesaLimitsData {
+  buy: {
+    minAmount: number;
+    maxAmount: number;
+    dailyLimit: number;
+    currency: string;
+    description: string;
+  };
+  payout: {
+    minAmount: number;
+    maxAmount: number;
+    dailyLimit: number;
+    currency: string;
+    description: string;
+  };
+}
+
+export interface MpesaBuyRequest {
+  phoneNumber: string;
+  amount: number;
+  walletId: string;
+  accountReference?: string;
+  transactionDesc?: string;
+}
+
+export interface MpesaBuyResponse {
+  transactionId: string;
+  merchantRequestID: string;
+  checkoutRequestID: string;
+  status: string;
+  message: string;
+}
+
+export interface MpesaSellRequest {
+  phoneNumber: string;
+  amount: number;
+  lightningInvoice: string;
+  accountReference?: string;
+  transactionDesc?: string;
+}
+
+export interface MpesaSellResponse {
+  transactionId: string;
+  status: string;
+  message: string;
+}
+
 class ApiService {
   private api: AxiosInstance;
   private authToken: string | null = null;
@@ -264,6 +317,102 @@ class ApiService {
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to refund payment',
+      };
+    }
+  }
+
+  // Fiat Integration Methods
+
+  public async getExchangeRate(): Promise<ApiResponse<ExchangeRateData>> {
+    try {
+      const response = await this.api.get('/api/bitcoin/exchange-rate');
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get exchange rate',
+      };
+    }
+  }
+
+  public async getMpesaLimits(): Promise<ApiResponse<MpesaLimitsData>> {
+    try {
+      const response = await this.api.get('/api/fiat/mpesa/limits');
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get MPesa limits',
+      };
+    }
+  }
+
+  public async buyBitcoinWithMpesa(
+    request: MpesaBuyRequest
+  ): Promise<ApiResponse<MpesaBuyResponse>> {
+    try {
+      const response = await this.api.post('/api/fiat/mpesa/buy', request);
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to buy Bitcoin with MPesa',
+      };
+    }
+  }
+
+  public async sellBitcoinWithMpesa(
+    request: MpesaSellRequest
+  ): Promise<ApiResponse<MpesaSellResponse>> {
+    try {
+      const response = await this.api.post('/api/fiat/mpesa/payout', request);
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to sell Bitcoin with MPesa',
+      };
+    }
+  }
+
+  public async getTransactionStatus(
+    transactionId: string
+  ): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.api.get(`/api/fiat/transaction/${transactionId}`);
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get transaction status',
+      };
+    }
+  }
+
+  public async convertKesToSats(kesAmount: number): Promise<ApiResponse<{ sats: number }>> {
+    try {
+      const response = await this.api.post('/api/bitcoin/convert/kes-to-sats', {
+        amount: kesAmount,
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to convert KES to sats',
+      };
+    }
+  }
+
+  public async convertSatsToKes(satsAmount: number): Promise<ApiResponse<{ kes: number }>> {
+    try {
+      const response = await this.api.post('/api/bitcoin/convert/sats-to-kes', {
+        amount: satsAmount,
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to convert sats to KES',
       };
     }
   }
