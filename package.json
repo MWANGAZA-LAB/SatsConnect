@@ -8,7 +8,7 @@
     "mobile"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail \"npm run dev:rust\" \"npm run dev:node\" \"npm run dev:mobile\"",
+    "dev": "concurrently --kill-others-on-fail --shell powershell \"npm run dev:rust\" \"npm run dev:node\" \"npm run dev:mobile\"",
     "dev:rust": "cd backend/rust-engine && cargo run --bin engine_server",
     "dev:node": "cd backend/node-orchestrator && npm run dev",
     "dev:mobile": "cd mobile && npx expo start",

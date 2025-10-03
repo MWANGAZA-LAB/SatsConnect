@@ -1,0 +1,28 @@
+# Rust target directory
+backend/rust-engine/target/
+backend/rust-engine/protoc/
+
+# Node modules
+node_modules/
+backend/node-orchestrator/node_modules/
+mobile/node_modules/
+
+# Build artifacts
+*.log
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.production
