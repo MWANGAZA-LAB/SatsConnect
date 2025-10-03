@@ -74,13 +74,16 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: backend/node-orchestrator/package-lock.json
+        node-version: '20'
         
     - name: Install dependencies
       working-directory: backend/node-orchestrator
-      run: npm ci
+      run: |
+        if (Test-Path package-lock.json) {
+          npm ci
+        } else {
+          npm install
+        }
       
     - name: Run linting
       working-directory: backend/node-orchestrator
@@ -104,13 +107,16 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: mobile/package-lock.json
+        node-version: '20'
         
     - name: Install dependencies
       working-directory: mobile
-      run: npm ci
+      run: |
+        if (Test-Path package-lock.json) {
+          npm ci
+        } else {
+          npm install
+        }
       
     - name: Run linting
       working-directory: mobile
