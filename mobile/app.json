@@ -69,28 +69,13 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font",
       "expo-secure-store",
       "expo-camera",
-      "expo-local-authentication",
-      "expo-crypto",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "13.0"
-          },
-          "android": {
-            "minSdkVersion": 23,
-            "targetSdkVersion": 34,
-            "compileSdkVersion": 34
-          }
-        }
-      ]
+      "expo-local-authentication"
     ],
     "extra": {
       "eas": {
