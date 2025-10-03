@@ -45,7 +45,7 @@ bitcoin = "0.32"
 lightning = "0.0.120"
 lightning-persister = "0.0.120"
 lightning-rapid-gossip-sync = "0.0.120"
-lightning-invoice = "0.0.120"
+lightning-invoice = "0.33.0"
 
 # Crypto/seed
 bip39 = { version = "2", default-features = false, features = ["std", "rand"] }
