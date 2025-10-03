@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -56,7 +56,13 @@ impl PerformanceMonitor {
         }
     }
 
-    pub async fn record_request(&self, endpoint: String, method: String, response_time_ms: u64, status_code: u16) {
+    pub async fn record_request(
+        &self,
+        endpoint: String,
+        method: String,
+        response_time_ms: u64,
+        status_code: u16,
+    ) {
         let request_metric = RequestMetrics {
             endpoint,
             method,
@@ -74,7 +80,13 @@ impl PerformanceMonitor {
         }
     }
 
-    pub async fn record_system_metrics(&self, memory_usage_mb: f64, cpu_usage_percent: f64, disk_usage_percent: f64, network_io_mb: f64) {
+    pub async fn record_system_metrics(
+        &self,
+        memory_usage_mb: f64,
+        cpu_usage_percent: f64,
+        disk_usage_percent: f64,
+        network_io_mb: f64,
+    ) {
         let system_metric = SystemMetrics {
             memory_usage_mb,
             cpu_usage_percent,
@@ -97,13 +109,12 @@ impl PerformanceMonitor {
         let system_metrics = self.system_metrics.read().await;
 
         let request_count = request_metrics.len() as u64;
-        let error_count = request_metrics.iter()
+        let error_count = request_metrics
+            .iter()
             .filter(|m| m.status_code >= 400)
             .count() as u64;
 
-        let response_times: Vec<u64> = request_metrics.iter()
-            .map(|m| m.response_time_ms)
-            .collect();
+        let response_times: Vec<u64> = request_metrics.iter().map(|m| m.response_time_ms).collect();
 
         let average_response_time_ms = if !response_times.is_empty() {
             response_times.iter().sum::<u64>() as f64 / response_times.len() as f64
@@ -135,11 +146,15 @@ impl PerformanceMonitor {
             0.0
         };
 
-        let (memory_usage_mb, cpu_usage_percent) = if let Some(latest_system) = system_metrics.last() {
-            (latest_system.memory_usage_mb, latest_system.cpu_usage_percent)
-        } else {
-            (0.0, 0.0)
-        };
+        let (memory_usage_mb, cpu_usage_percent) =
+            if let Some(latest_system) = system_metrics.last() {
+                (
+                    latest_system.memory_usage_mb,
+                    latest_system.cpu_usage_percent,
+                )
+            } else {
+                (0.0, 0.0)
+            };
 
         PerformanceMetrics {
             request_count,
@@ -160,7 +175,8 @@ impl PerformanceMonitor {
 
         // Group metrics by endpoint
         for metric in request_metrics.iter() {
-            endpoint_metrics.entry(metric.endpoint.clone())
+            endpoint_metrics
+                .entry(metric.endpoint.clone())
                 .or_insert_with(Vec::new)
                 .push(metric);
         }
@@ -169,13 +185,9 @@ impl PerformanceMonitor {
 
         for (endpoint, metrics) in endpoint_metrics {
             let request_count = metrics.len() as u64;
-            let error_count = metrics.iter()
-                .filter(|m| m.status_code >= 400)
-                .count() as u64;
+            let error_count = metrics.iter().filter(|m| m.status_code >= 400).count() as u64;
 
-            let response_times: Vec<u64> = metrics.iter()
-                .map(|m| m.response_time_ms)
-                .collect();
+            let response_times: Vec<u64> = metrics.iter().map(|m| m.response_time_ms).collect();
 
             let average_response_time_ms = if !response_times.is_empty() {
                 response_times.iter().sum::<u64>() as f64 / response_times.len() as f64
@@ -207,17 +219,20 @@ impl PerformanceMonitor {
                 0.0
             };
 
-            result.insert(endpoint, PerformanceMetrics {
-                request_count,
-                error_count,
-                average_response_time_ms,
-                p95_response_time_ms,
-                p99_response_time_ms,
-                throughput_rps,
-                memory_usage_mb: 0.0,
-                cpu_usage_percent: 0.0,
-                timestamp: chrono::Utc::now(),
-            });
+            result.insert(
+                endpoint,
+                PerformanceMetrics {
+                    request_count,
+                    error_count,
+                    average_response_time_ms,
+                    p95_response_time_ms,
+                    p99_response_time_ms,
+                    throughput_rps,
+                    memory_usage_mb: 0.0,
+                    cpu_usage_percent: 0.0,
+                    timestamp: chrono::Utc::now(),
+                },
+            );
         }
 
         result
@@ -239,28 +254,22 @@ mod tests {
     #[tokio::test]
     async fn test_performance_monitor() {
         let monitor = PerformanceMonitor::new(1000);
-        
+
         // Record some request metrics
-        monitor.record_request(
-            "/api/wallets".to_string(),
-            "GET".to_string(),
-            100,
-            200,
-        ).await;
-        
-        monitor.record_request(
-            "/api/payments".to_string(),
-            "POST".to_string(),
-            200,
-            201,
-        ).await;
-        
+        monitor
+            .record_request("/api/wallets".to_string(), "GET".to_string(), 100, 200)
+            .await;
+
+        monitor
+            .record_request("/api/payments".to_string(), "POST".to_string(), 200, 201)
+            .await;
+
         // Record system metrics
         monitor.record_system_metrics(512.0, 25.0, 60.0, 10.0).await;
-        
+
         // Get performance metrics
         let metrics = monitor.get_performance_metrics().await;
-        
+
         assert_eq!(metrics.request_count, 2);
         assert_eq!(metrics.error_count, 0);
         assert_eq!(metrics.memory_usage_mb, 512.0);
@@ -270,18 +279,24 @@ mod tests {
     #[tokio::test]
     async fn test_endpoint_metrics() {
         let monitor = PerformanceMonitor::new(1000);
-        
+
         // Record metrics for different endpoints
-        monitor.record_request("/api/wallets".to_string(), "GET".to_string(), 100, 200).await;
-        monitor.record_request("/api/wallets".to_string(), "GET".to_string(), 150, 200).await;
-        monitor.record_request("/api/payments".to_string(), "POST".to_string(), 200, 201).await;
-        
+        monitor
+            .record_request("/api/wallets".to_string(), "GET".to_string(), 100, 200)
+            .await;
+        monitor
+            .record_request("/api/wallets".to_string(), "GET".to_string(), 150, 200)
+            .await;
+        monitor
+            .record_request("/api/payments".to_string(), "POST".to_string(), 200, 201)
+            .await;
+
         let endpoint_metrics = monitor.get_endpoint_metrics().await;
-        
+
         assert_eq!(endpoint_metrics.len(), 2);
         assert!(endpoint_metrics.contains_key("/api/wallets"));
         assert!(endpoint_metrics.contains_key("/api/payments"));
-        
+
         let wallets_metrics = endpoint_metrics.get("/api/wallets").unwrap();
         assert_eq!(wallets_metrics.request_count, 2);
     }

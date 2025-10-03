@@ -6,9 +6,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let protoc_path = std::path::Path::new("protoc/protoc.exe");
     if protoc_path.exists() {
         std::env::set_var("PROTOC", protoc_path.to_str().unwrap());
-        println!("cargo:warning=Using local protoc at: {}", protoc_path.to_str().unwrap());
+        println!(
+            "cargo:warning=Using local protoc at: {}",
+            protoc_path.to_str().unwrap()
+        );
     } else {
-        println!("cargo:warning=Local protoc not found at: {}", protoc_path.to_str().unwrap());
+        println!(
+            "cargo:warning=Local protoc not found at: {}",
+            protoc_path.to_str().unwrap()
+        );
     }
 
     tonic_build::configure()

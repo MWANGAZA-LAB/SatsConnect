@@ -1,10 +1,10 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// Alert levels
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -100,7 +100,10 @@ impl AlertManager {
     }
 
     /// Add a notification channel
-    pub fn add_notification_channel(&mut self, channel: Box<dyn NotificationChannel + Send + Sync>) {
+    pub fn add_notification_channel(
+        &mut self,
+        channel: Box<dyn NotificationChannel + Send + Sync>,
+    ) {
         self.notification_channels.push(channel);
     }
 
@@ -117,7 +120,7 @@ impl AlertManager {
     #[instrument(skip(self))]
     pub async fn evaluate_metrics(&self, metrics: HashMap<String, f64>) -> Result<()> {
         let rules = self.rules.read().await;
-        
+
         for rule in rules.iter() {
             if let Some(&value) = metrics.get(&rule.metric_name) {
                 if self.evaluate_condition(&rule.condition, value) {
@@ -127,7 +130,7 @@ impl AlertManager {
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -146,7 +149,7 @@ impl AlertManager {
     /// Trigger an alert
     async fn trigger_alert(&self, rule: &AlertRule, value: f64) -> Result<()> {
         let alert_id = format!("{}_{}", rule.name, uuid::Uuid::new_v4());
-        
+
         let alert = Alert {
             id: alert_id.clone(),
             rule_name: rule.name.clone(),
@@ -182,30 +185,29 @@ impl AlertManager {
     /// Resolve an alert
     async fn resolve_alert(&self, rule_name: &str) -> Result<()> {
         let mut alerts = self.alerts.write().await;
-        
+
         if let Some(alert) = alerts.get_mut(rule_name) {
             if alert.state == AlertState::Firing {
                 alert.state = AlertState::Resolved;
                 alert.resolved_at = Some(Utc::now());
-                
+
                 info!("Resolved alert: {}", rule_name);
             }
         }
-        
+
         Ok(())
     }
 
     /// Format alert message
     fn format_alert_message(&self, rule: &AlertRule, value: f64) -> String {
         let threshold = self.get_threshold_value(rule);
-        let threshold_str = threshold.map(|t| format!(" (threshold: {})", t)).unwrap_or_default();
-        
+        let threshold_str = threshold
+            .map(|t| format!(" (threshold: {})", t))
+            .unwrap_or_default();
+
         format!(
             "Alert '{}': {} = {}{}",
-            rule.name,
-            rule.metric_name,
-            value,
-            threshold_str
+            rule.name, rule.metric_name, value, threshold_str
         )
     }
 
@@ -221,7 +223,8 @@ impl AlertManager {
     /// Get all active alerts
     pub async fn get_active_alerts(&self) -> Vec<Alert> {
         let alerts = self.alerts.read().await;
-        alerts.values()
+        alerts
+            .values()
             .filter(|alert| alert.state == AlertState::Firing)
             .cloned()
             .collect()
@@ -230,7 +233,8 @@ impl AlertManager {
     /// Get alerts by level
     pub async fn get_alerts_by_level(&self, level: AlertLevel) -> Vec<Alert> {
         let alerts = self.alerts.read().await;
-        alerts.values()
+        alerts
+            .values()
             .filter(|alert| alert.level == level)
             .cloned()
             .collect()
@@ -250,17 +254,26 @@ impl AlertManager {
     pub async fn get_alert_stats(&self) -> AlertStats {
         let alerts = self.alerts.read().await;
         let rules = self.rules.read().await;
-        
+
         let total_alerts = alerts.len();
-        let active_alerts = alerts.values().filter(|a| a.state == AlertState::Firing).count();
-        let resolved_alerts = alerts.values().filter(|a| a.state == AlertState::Resolved).count();
-        let suppressed_alerts = alerts.values().filter(|a| a.state == AlertState::Suppressed).count();
-        
+        let active_alerts = alerts
+            .values()
+            .filter(|a| a.state == AlertState::Firing)
+            .count();
+        let resolved_alerts = alerts
+            .values()
+            .filter(|a| a.state == AlertState::Resolved)
+            .count();
+        let suppressed_alerts = alerts
+            .values()
+            .filter(|a| a.state == AlertState::Suppressed)
+            .count();
+
         let mut alerts_by_level = HashMap::new();
         for alert in alerts.values() {
             *alerts_by_level.entry(alert.level.clone()).or_insert(0) += 1;
         }
-        
+
         AlertStats {
             total_alerts,
             active_alerts,
@@ -306,7 +319,6 @@ impl SatsConnectAlerts {
                 labels: HashMap::new(),
                 annotations: HashMap::new(),
             },
-            
             // Lightning channel balance low
             AlertRule {
                 name: "lightning_balance_low".to_string(),
@@ -318,7 +330,6 @@ impl SatsConnectAlerts {
                 labels: HashMap::new(),
                 annotations: HashMap::new(),
             },
-            
             // High memory usage
             AlertRule {
                 name: "high_memory_usage".to_string(),
@@ -330,7 +341,6 @@ impl SatsConnectAlerts {
                 labels: HashMap::new(),
                 annotations: HashMap::new(),
             },
-            
             // Exchange rate stale
             AlertRule {
                 name: "exchange_rate_stale".to_string(),
@@ -354,7 +364,7 @@ mod tests {
     #[tokio::test]
     async fn test_alert_manager() {
         let manager = AlertManager::new();
-        
+
         let rule = AlertRule {
             name: "test_alert".to_string(),
             description: "Test alert".to_string(),
@@ -365,14 +375,14 @@ mod tests {
             labels: HashMap::new(),
             annotations: HashMap::new(),
         };
-        
+
         manager.add_rule(rule).await.unwrap();
-        
+
         let mut metrics = HashMap::new();
         metrics.insert("test_metric".to_string(), 15.0);
-        
+
         manager.evaluate_metrics(metrics).await.unwrap();
-        
+
         let active_alerts = manager.get_active_alerts().await;
         assert_eq!(active_alerts.len(), 1);
         assert_eq!(active_alerts[0].rule_name, "test_alert");

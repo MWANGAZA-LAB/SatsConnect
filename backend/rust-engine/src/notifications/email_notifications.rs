@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailNotification {
@@ -45,14 +45,14 @@ impl EmailNotificationService {
 
     pub async fn send_notification(&self, notification: EmailNotification) -> Result<()> {
         info!("Sending email notification to: {}", notification.to);
-        
+
         // In a real implementation, this would use an email service like SendGrid, SES, etc.
         // For now, we'll just log the notification
         info!(
             "Email sent - To: {}, Subject: {}, Body: {}",
             notification.to, notification.subject, notification.body
         );
-        
+
         Ok(())
     }
 
@@ -63,7 +63,7 @@ impl EmailNotificationService {
         variables: HashMap<String, String>,
     ) -> Result<()> {
         let (subject, body) = self.render_template(&template, &variables);
-        
+
         let notification = EmailNotification {
             to,
             subject,
@@ -71,11 +71,15 @@ impl EmailNotificationService {
             template: Some(template),
             variables,
         };
-        
+
         self.send_notification(notification).await
     }
 
-    fn render_template(&self, template: &EmailTemplate, variables: &HashMap<String, String>) -> (String, String) {
+    fn render_template(
+        &self,
+        template: &EmailTemplate,
+        variables: &HashMap<String, String>,
+    ) -> (String, String) {
         match template {
             EmailTemplate::Welcome => {
                 let name = variables.get("name").unwrap_or(&"User".to_string());
@@ -142,9 +146,9 @@ mod tests {
             from_email: "noreply@satsconnect.com".to_string(),
             from_name: "SatsConnect".to_string(),
         };
-        
+
         let service = EmailNotificationService::new(config);
-        
+
         let notification = EmailNotification {
             to: "test@example.com".to_string(),
             subject: "Test Subject".to_string(),
@@ -152,7 +156,7 @@ mod tests {
             template: None,
             variables: HashMap::new(),
         };
-        
+
         let result = service.send_notification(notification).await;
         assert!(result.is_ok());
     }
@@ -167,18 +171,20 @@ mod tests {
             from_email: "noreply@satsconnect.com".to_string(),
             from_name: "SatsConnect".to_string(),
         };
-        
+
         let service = EmailNotificationService::new(config);
-        
+
         let mut variables = HashMap::new();
         variables.insert("name".to_string(), "John Doe".to_string());
-        
-        let result = service.send_template_notification(
-            "test@example.com".to_string(),
-            EmailTemplate::Welcome,
-            variables,
-        ).await;
-        
+
+        let result = service
+            .send_template_notification(
+                "test@example.com".to_string(),
+                EmailTemplate::Welcome,
+                variables,
+            )
+            .await;
+
         assert!(result.is_ok());
     }
 }

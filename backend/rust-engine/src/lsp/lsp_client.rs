@@ -1,10 +1,10 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// Lightning Service Provider client for liquidity management
 #[derive(Debug)]
@@ -22,10 +22,10 @@ pub struct LSPProvider {
     pub is_active: bool,
     pub min_channel_size: u64,
     pub max_channel_size: u64,
-    pub fee_rate: f64, // sats per 1000 sats
+    pub fee_rate: f64,         // sats per 1000 sats
     pub reputation_score: f64, // 0.0 to 1.0
     pub last_used: Option<DateTime<Utc>>,
-    pub success_rate: f64, // 0.0 to 1.0
+    pub success_rate: f64,          // 0.0 to 1.0
     pub average_response_time: u64, // milliseconds
 }
 
@@ -101,14 +101,14 @@ impl LSPClient {
     #[instrument(skip(self))]
     pub async fn get_best_provider(&self) -> Result<Option<LSPProvider>> {
         let providers = self.providers.read().await;
-        
+
         let mut eligible_providers: Vec<&LSPProvider> = providers
             .values()
             .filter(|p| {
-                p.is_active &&
-                p.fee_rate <= self.config.max_fee_rate &&
-                p.reputation_score >= self.config.min_reputation_score &&
-                p.average_response_time <= self.config.max_response_time
+                p.is_active
+                    && p.fee_rate <= self.config.max_fee_rate
+                    && p.reputation_score >= self.config.min_reputation_score
+                    && p.average_response_time <= self.config.max_response_time
             })
             .collect();
 
@@ -134,11 +134,12 @@ impl LSPClient {
 
         let reputation_score = provider.reputation_score;
         let fee_score = 1.0 - (provider.fee_rate / self.config.max_fee_rate);
-        let response_time_score = 1.0 - (provider.average_response_time as f64 / self.config.max_response_time as f64);
+        let response_time_score =
+            1.0 - (provider.average_response_time as f64 / self.config.max_response_time as f64);
 
-        reputation_score * reputation_weight +
-        fee_score * fee_weight +
-        response_time_score * response_time_weight
+        reputation_score * reputation_weight
+            + fee_score * fee_weight
+            + response_time_score * response_time_weight
     }
 
     /// Request a new channel from LSP
@@ -166,10 +167,13 @@ impl LSPClient {
         info!("Requesting channel from LSP provider: {}", provider.name);
 
         // Simulate LSP channel request
-        let response = self.simulate_lsp_channel_request(&provider, &request).await?;
+        let response = self
+            .simulate_lsp_channel_request(&provider, &request)
+            .await?;
 
         // Update provider statistics
-        self.update_provider_stats(&provider.name, response.success).await?;
+        self.update_provider_stats(&provider.name, response.success)
+            .await?;
 
         Ok(response)
     }
@@ -181,7 +185,10 @@ impl LSPClient {
         request: &LSPChannelRequest,
     ) -> Result<LSPChannelResponse> {
         // Simulate API call delay
-        tokio::time::sleep(tokio::time::Duration::from_millis(provider.average_response_time)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(
+            provider.average_response_time,
+        ))
+        .await;
 
         // Simulate success/failure based on provider reputation
         let success_probability = provider.reputation_score;
@@ -237,11 +244,12 @@ impl LSPClient {
         let mut providers = self.providers.write().await;
         if let Some(provider) = providers.get_mut(provider_name) {
             provider.last_used = Some(Utc::now());
-            
+
             // Update success rate (simple moving average)
             let alpha = 0.1; // Learning rate
-            provider.success_rate = alpha * (success as f64) + (1.0 - alpha) * provider.success_rate;
-            
+            provider.success_rate =
+                alpha * (success as f64) + (1.0 - alpha) * provider.success_rate;
+
             // Update reputation score based on success rate
             provider.reputation_score = (provider.reputation_score + provider.success_rate) / 2.0;
         }
@@ -257,7 +265,7 @@ impl LSPClient {
     /// Get provider statistics
     pub async fn get_provider_stats(&self) -> Result<LSPStats> {
         let providers = self.providers.read().await;
-        
+
         let total_providers = providers.len();
         let active_providers = providers.values().filter(|p| p.is_active).count();
         let avg_fee_rate = if total_providers > 0 {
@@ -324,7 +332,7 @@ mod tests {
     async fn test_lsp_client_creation() {
         let config = LSPConfig::default();
         let client = LSPClient::new(config);
-        
+
         let stats = client.get_provider_stats().await.unwrap();
         assert_eq!(stats.total_providers, 0);
     }
@@ -332,7 +340,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_provider() {
         let client = LSPClient::new(LSPConfig::default());
-        
+
         let provider = LSPProvider {
             name: "test_provider".to_string(),
             endpoint: "https://test.lsp.com".to_string(),
@@ -346,9 +354,9 @@ mod tests {
             success_rate: 0.95,
             average_response_time: 1000,
         };
-        
+
         client.add_provider(provider).await.unwrap();
-        
+
         let stats = client.get_provider_stats().await.unwrap();
         assert_eq!(stats.total_providers, 1);
     }

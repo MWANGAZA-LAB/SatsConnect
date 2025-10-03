@@ -1,9 +1,9 @@
 pub mod coinjoin;
-pub mod tor_support;
-pub mod privacy_engine;
 pub mod mixing_service;
+pub mod privacy_engine;
+pub mod tor_support;
 
-pub use coinjoin::{CoinJoinService, CoinJoinRound, CoinJoinParticipant};
-pub use tor_support::{TorClient, TorConfig, TorConnection};
+pub use coinjoin::{CoinJoinParticipant, CoinJoinRound, CoinJoinService};
+pub use mixing_service::{MixingRound, MixingService, MixingStrategy};
 pub use privacy_engine::{PrivacyEngine, PrivacyLevel, PrivacySettings};
-pub use mixing_service::{MixingService, MixingRound, MixingStrategy};
+pub use tor_support::{TorClient, TorConfig, TorConnection};

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ChannelState {
@@ -38,10 +38,10 @@ pub struct ChannelConfig {
 impl Default for ChannelConfig {
     fn default() -> Self {
         Self {
-            min_channel_size: 100_000, // 100k sats
+            min_channel_size: 100_000,    // 100k sats
             max_channel_size: 10_000_000, // 10M sats
             max_channels_per_peer: 5,
-            channel_fee_rate: 1, // 1 sat per vbyte
+            channel_fee_rate: 1,  // 1 sat per vbyte
             channel_timeout: 144, // 24 hours
         }
     }
@@ -63,11 +63,7 @@ impl ChannelManager {
     }
 
     /// Create a new channel with a peer
-    pub async fn create_channel(
-        &self,
-        peer_id: String,
-        capacity_sats: u64,
-    ) -> Result<String> {
+    pub async fn create_channel(&self, peer_id: String, capacity_sats: u64) -> Result<String> {
         // Validate channel size
         if capacity_sats < self.config.min_channel_size {
             return Err(anyhow::anyhow!(
@@ -87,9 +83,7 @@ impl ChannelManager {
 
         // Check existing channels with this peer
         let channels = self.channels.read().await;
-        let peer_channel_count = channels.values()
-            .filter(|ch| ch.peer_id == peer_id)
-            .count();
+        let peer_channel_count = channels.values().filter(|ch| ch.peer_id == peer_id).count();
 
         if peer_channel_count >= self.config.max_channels_per_peer as usize {
             return Err(anyhow::anyhow!(
@@ -141,18 +135,15 @@ impl ChannelManager {
     /// Get channels by peer
     pub async fn get_channels_by_peer(&self, peer_id: &str) -> Vec<ChannelInfo> {
         let channels = self.channels.read().await;
-        channels.values()
+        channels
+            .values()
             .filter(|ch| ch.peer_id == peer_id)
             .cloned()
             .collect()
     }
 
     /// Update channel state
-    pub async fn update_channel_state(
-        &self,
-        channel_id: &str,
-        state: ChannelState,
-    ) -> Result<()> {
+    pub async fn update_channel_state(&self, channel_id: &str, state: ChannelState) -> Result<()> {
         let mut channels = self.channels.write().await;
         if let Some(channel) = channels.get_mut(channel_id) {
             channel.state = state;
@@ -202,7 +193,8 @@ impl ChannelManager {
     /// Get total channel capacity
     pub async fn get_total_capacity(&self) -> u64 {
         let channels = self.channels.read().await;
-        channels.values()
+        channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .map(|ch| ch.capacity_sats)
             .sum()
@@ -211,7 +203,8 @@ impl ChannelManager {
     /// Get total local balance
     pub async fn get_total_local_balance(&self) -> u64 {
         let channels = self.channels.read().await;
-        channels.values()
+        channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .map(|ch| ch.local_balance_sats)
             .sum()
@@ -220,7 +213,8 @@ impl ChannelManager {
     /// Get total remote balance
     pub async fn get_total_remote_balance(&self) -> u64 {
         let channels = self.channels.read().await;
-        channels.values()
+        channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .map(|ch| ch.remote_balance_sats)
             .sum()
@@ -229,32 +223,39 @@ impl ChannelManager {
     /// Get channel statistics
     pub async fn get_channel_stats(&self) -> ChannelStats {
         let channels = self.channels.read().await;
-        
+
         let total_channels = channels.len();
-        let open_channels = channels.values()
+        let open_channels = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .count();
-        let pending_channels = channels.values()
+        let pending_channels = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Pending)
             .count();
-        let closing_channels = channels.values()
+        let closing_channels = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Closing)
             .count();
-        let closed_channels = channels.values()
+        let closed_channels = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Closed)
             .count();
 
-        let total_capacity: u64 = channels.values()
+        let total_capacity: u64 = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .map(|ch| ch.capacity_sats)
             .sum();
 
-        let total_local_balance: u64 = channels.values()
+        let total_local_balance: u64 = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .map(|ch| ch.local_balance_sats)
             .sum();
 
-        let total_remote_balance: u64 = channels.values()
+        let total_remote_balance: u64 = channels
+            .values()
             .filter(|ch| ch.state == ChannelState::Open)
             .map(|ch| ch.remote_balance_sats)
             .sum();
@@ -292,10 +293,13 @@ mod tests {
     async fn test_create_channel() {
         let config = ChannelConfig::default();
         let manager = ChannelManager::new(config);
-        
-        let channel_id = manager.create_channel("peer123".to_string(), 1_000_000).await.unwrap();
+
+        let channel_id = manager
+            .create_channel("peer123".to_string(), 1_000_000)
+            .await
+            .unwrap();
         assert!(!channel_id.is_empty());
-        
+
         let channel = manager.get_channel(&channel_id).await.unwrap();
         assert!(channel.is_some());
         let channel = channel.unwrap();
@@ -308,13 +312,15 @@ mod tests {
     async fn test_channel_validation() {
         let config = ChannelConfig::default();
         let manager = ChannelManager::new(config);
-        
+
         // Test minimum channel size
         let result = manager.create_channel("peer123".to_string(), 50_000).await;
         assert!(result.is_err());
-        
+
         // Test maximum channel size
-        let result = manager.create_channel("peer123".to_string(), 20_000_000).await;
+        let result = manager
+            .create_channel("peer123".to_string(), 20_000_000)
+            .await;
         assert!(result.is_err());
     }
 
@@ -322,11 +328,17 @@ mod tests {
     async fn test_channel_stats() {
         let config = ChannelConfig::default();
         let manager = ChannelManager::new(config);
-        
+
         // Create some channels
-        manager.create_channel("peer1".to_string(), 1_000_000).await.unwrap();
-        manager.create_channel("peer2".to_string(), 2_000_000).await.unwrap();
-        
+        manager
+            .create_channel("peer1".to_string(), 1_000_000)
+            .await
+            .unwrap();
+        manager
+            .create_channel("peer2".to_string(), 2_000_000)
+            .await
+            .unwrap();
+
         let stats = manager.get_channel_stats().await;
         assert_eq!(stats.total_channels, 2);
         assert_eq!(stats.pending_channels, 2);

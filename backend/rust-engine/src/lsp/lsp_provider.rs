@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LspProviderType {
@@ -95,7 +95,7 @@ impl LspProvider {
         for provider in &config.providers {
             provider_map.insert(provider.name.clone(), provider.clone());
         }
-        
+
         Self {
             config,
             provider_map,
@@ -107,9 +107,7 @@ impl LspProvider {
     }
 
     pub fn get_active_providers(&self) -> Vec<&LspProviderInfo> {
-        self.provider_map.values()
-            .filter(|p| p.is_active)
-            .collect()
+        self.provider_map.values().filter(|p| p.is_active).collect()
     }
 
     pub fn get_best_provider(&self) -> Option<&LspProviderInfo> {
@@ -117,9 +115,14 @@ impl LspProvider {
             .iter()
             .max_by(|a, b| {
                 // Sort by reputation score, then success rate, then response time
-                a.reputation_score.partial_cmp(&b.reputation_score)
+                a.reputation_score
+                    .partial_cmp(&b.reputation_score)
                     .unwrap_or(std::cmp::Ordering::Equal)
-                    .then(a.success_rate.partial_cmp(&b.success_rate).unwrap_or(std::cmp::Ordering::Equal))
+                    .then(
+                        a.success_rate
+                            .partial_cmp(&b.success_rate)
+                            .unwrap_or(std::cmp::Ordering::Equal),
+                    )
                     .then(b.average_response_time_ms.cmp(&a.average_response_time_ms))
             })
             .copied()
@@ -132,7 +135,11 @@ impl LspProvider {
             .collect()
     }
 
-    pub fn get_providers_by_capacity(&self, min_capacity: u64, max_capacity: u64) -> Vec<&LspProviderInfo> {
+    pub fn get_providers_by_capacity(
+        &self,
+        min_capacity: u64,
+        max_capacity: u64,
+    ) -> Vec<&LspProviderInfo> {
         self.get_active_providers()
             .into_iter()
             .filter(|p| p.min_channel_size <= min_capacity && p.max_channel_size >= max_capacity)
@@ -142,7 +149,10 @@ impl LspProvider {
     pub fn update_provider_reputation(&mut self, name: &str, reputation_score: f64) -> Result<()> {
         if let Some(provider) = self.provider_map.get_mut(name) {
             provider.reputation_score = reputation_score;
-            info!("Updated reputation score for provider {} to {}", name, reputation_score);
+            info!(
+                "Updated reputation score for provider {} to {}",
+                name, reputation_score
+            );
         } else {
             return Err(anyhow::anyhow!("Provider {} not found", name));
         }
@@ -152,17 +162,27 @@ impl LspProvider {
     pub fn update_provider_success_rate(&mut self, name: &str, success_rate: f64) -> Result<()> {
         if let Some(provider) = self.provider_map.get_mut(name) {
             provider.success_rate = success_rate;
-            info!("Updated success rate for provider {} to {}", name, success_rate);
+            info!(
+                "Updated success rate for provider {} to {}",
+                name, success_rate
+            );
         } else {
             return Err(anyhow::anyhow!("Provider {} not found", name));
         }
         Ok(())
     }
 
-    pub fn update_provider_response_time(&mut self, name: &str, response_time_ms: u64) -> Result<()> {
+    pub fn update_provider_response_time(
+        &mut self,
+        name: &str,
+        response_time_ms: u64,
+    ) -> Result<()> {
         if let Some(provider) = self.provider_map.get_mut(name) {
             provider.average_response_time_ms = response_time_ms;
-            info!("Updated response time for provider {} to {}ms", name, response_time_ms);
+            info!(
+                "Updated response time for provider {} to {}ms",
+                name, response_time_ms
+            );
         } else {
             return Err(anyhow::anyhow!("Provider {} not found", name));
         }
@@ -186,18 +206,24 @@ impl LspProvider {
     pub fn get_provider_stats(&self) -> LspProviderStats {
         let total_providers = self.provider_map.len();
         let active_providers = self.get_active_providers().len();
-        let avg_reputation = self.get_active_providers()
+        let avg_reputation = self
+            .get_active_providers()
             .iter()
             .map(|p| p.reputation_score)
-            .sum::<f64>() / active_providers.max(1) as f64;
-        let avg_success_rate = self.get_active_providers()
+            .sum::<f64>()
+            / active_providers.max(1) as f64;
+        let avg_success_rate = self
+            .get_active_providers()
             .iter()
             .map(|p| p.success_rate)
-            .sum::<f64>() / active_providers.max(1) as f64;
-        let avg_response_time = self.get_active_providers()
+            .sum::<f64>()
+            / active_providers.max(1) as f64;
+        let avg_response_time = self
+            .get_active_providers()
             .iter()
             .map(|p| p.average_response_time_ms)
-            .sum::<u64>() / active_providers.max(1) as u64;
+            .sum::<u64>()
+            / active_providers.max(1) as u64;
 
         LspProviderStats {
             total_providers,
@@ -226,7 +252,7 @@ mod tests {
     fn test_lsp_provider_creation() {
         let config = LspConfig::default();
         let provider = LspProvider::new(config);
-        
+
         assert!(provider.get_provider("AWS CloudHSM").is_some());
         assert!(provider.get_provider("Azure KeyVault").is_some());
     }
@@ -235,7 +261,7 @@ mod tests {
     fn test_get_active_providers() {
         let config = LspConfig::default();
         let provider = LspProvider::new(config);
-        
+
         let active_providers = provider.get_active_providers();
         assert_eq!(active_providers.len(), 2);
     }
@@ -244,7 +270,7 @@ mod tests {
     fn test_get_best_provider() {
         let config = LspConfig::default();
         let provider = LspProvider::new(config);
-        
+
         let best_provider = provider.get_best_provider();
         assert!(best_provider.is_some());
         assert_eq!(best_provider.unwrap().name, "AWS CloudHSM");
@@ -254,7 +280,7 @@ mod tests {
     fn test_get_providers_by_feature() {
         let config = LspConfig::default();
         let provider = LspProvider::new(config);
-        
+
         let providers = provider.get_providers_by_feature("channel_management");
         assert_eq!(providers.len(), 2);
     }
@@ -263,7 +289,7 @@ mod tests {
     fn test_provider_stats() {
         let config = LspConfig::default();
         let provider = LspProvider::new(config);
-        
+
         let stats = provider.get_provider_stats();
         assert_eq!(stats.total_providers, 2);
         assert_eq!(stats.active_providers, 2);

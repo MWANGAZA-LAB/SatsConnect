@@ -1,10 +1,10 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// Metric types supported by the monitoring system
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -53,26 +53,52 @@ impl MetricsCollector {
 
     /// Record a counter metric
     #[instrument(skip(self))]
-    pub async fn increment_counter(&self, name: &str, labels: HashMap<String, String>) -> Result<()> {
-        self.record_metric(name, MetricType::Counter, 1.0, labels, None).await
+    pub async fn increment_counter(
+        &self,
+        name: &str,
+        labels: HashMap<String, String>,
+    ) -> Result<()> {
+        self.record_metric(name, MetricType::Counter, 1.0, labels, None)
+            .await
     }
 
     /// Record a gauge metric
     #[instrument(skip(self))]
-    pub async fn set_gauge(&self, name: &str, value: f64, labels: HashMap<String, String>, unit: Option<String>) -> Result<()> {
-        self.record_metric(name, MetricType::Gauge, value, labels, unit).await
+    pub async fn set_gauge(
+        &self,
+        name: &str,
+        value: f64,
+        labels: HashMap<String, String>,
+        unit: Option<String>,
+    ) -> Result<()> {
+        self.record_metric(name, MetricType::Gauge, value, labels, unit)
+            .await
     }
 
     /// Record a histogram metric
     #[instrument(skip(self))]
-    pub async fn record_histogram(&self, name: &str, value: f64, labels: HashMap<String, String>, unit: Option<String>) -> Result<()> {
-        self.record_metric(name, MetricType::Histogram, value, labels, unit).await
+    pub async fn record_histogram(
+        &self,
+        name: &str,
+        value: f64,
+        labels: HashMap<String, String>,
+        unit: Option<String>,
+    ) -> Result<()> {
+        self.record_metric(name, MetricType::Histogram, value, labels, unit)
+            .await
     }
 
     /// Record a summary metric
     #[instrument(skip(self))]
-    pub async fn record_summary(&self, name: &str, value: f64, labels: HashMap<String, String>, unit: Option<String>) -> Result<()> {
-        self.record_metric(name, MetricType::Summary, value, labels, unit).await
+    pub async fn record_summary(
+        &self,
+        name: &str,
+        value: f64,
+        labels: HashMap<String, String>,
+        unit: Option<String>,
+    ) -> Result<()> {
+        self.record_metric(name, MetricType::Summary, value, labels, unit)
+            .await
     }
 
     /// Record a metric value
@@ -85,7 +111,7 @@ impl MetricsCollector {
         unit: Option<String>,
     ) -> Result<()> {
         let mut metrics = self.metrics.write().await;
-        
+
         let metric_value = MetricValue {
             value,
             timestamp: Utc::now(),
@@ -94,10 +120,12 @@ impl MetricsCollector {
 
         if let Some(metric) = metrics.get_mut(name) {
             metric.values.push(metric_value);
-            
+
             // Enforce retention policy
             if metric.values.len() > self.max_values_per_metric {
-                metric.values.drain(0..metric.values.len() - self.max_values_per_metric);
+                metric
+                    .values
+                    .drain(0..metric.values.len() - self.max_values_per_metric);
             }
         } else {
             let metric = Metric {
@@ -161,7 +189,7 @@ impl MetricsCollector {
     pub async fn cleanup_old_metrics(&self) -> Result<()> {
         let cutoff_time = Utc::now() - self.retention_period;
         let mut metrics = self.metrics.write().await;
-        
+
         for (_, metric) in metrics.iter_mut() {
             metric.values.retain(|v| v.timestamp > cutoff_time);
         }
@@ -182,7 +210,7 @@ impl MetricsCollector {
 
             // Add HELP line
             output.push_str(&format!("# HELP {} {}\n", metric.name, metric.description));
-            
+
             // Add TYPE line
             let type_str = match metric.metric_type {
                 MetricType::Counter => "counter",
@@ -197,20 +225,22 @@ impl MetricsCollector {
                 let labels_str = if value.labels.is_empty() {
                     String::new()
                 } else {
-                    let label_pairs: Vec<String> = value.labels
+                    let label_pairs: Vec<String> = value
+                        .labels
                         .iter()
                         .map(|(k, v)| format!("{}=\"{}\"", k, v))
                         .collect();
                     format!("{{{}}}", label_pairs.join(","))
                 };
 
-                let unit_suffix = metric.unit.as_ref().map(|u| format!("_{}", u)).unwrap_or_default();
+                let unit_suffix = metric
+                    .unit
+                    .as_ref()
+                    .map(|u| format!("_{}", u))
+                    .unwrap_or_default();
                 output.push_str(&format!(
                     "{}{} {} {}\n",
-                    metric.name,
-                    unit_suffix,
-                    labels_str,
-                    value.value
+                    metric.name, unit_suffix, labels_str, value.value
                 ));
             }
         }
@@ -277,12 +307,15 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_collector() {
         let collector = MetricsCollector::new();
-        
+
         let mut labels = HashMap::new();
         labels.insert("currency".to_string(), "KES".to_string());
-        
-        collector.increment_counter("test_counter", labels).await.unwrap();
-        
+
+        collector
+            .increment_counter("test_counter", labels)
+            .await
+            .unwrap();
+
         let metrics = collector.get_metrics().await;
         assert!(metrics.contains_key("test_counter"));
     }
@@ -290,14 +323,33 @@ mod tests {
     #[tokio::test]
     async fn test_metric_summary() {
         let collector = MetricsCollector::new();
-        
+
         let mut labels = HashMap::new();
         labels.insert("test".to_string(), "value".to_string());
-        
-        collector.set_gauge("test_gauge", 10.0, labels.clone(), Some("bytes".to_string())).await.unwrap();
-        collector.set_gauge("test_gauge", 20.0, labels.clone(), Some("bytes".to_string())).await.unwrap();
-        collector.set_gauge("test_gauge", 30.0, labels, Some("bytes".to_string())).await.unwrap();
-        
+
+        collector
+            .set_gauge(
+                "test_gauge",
+                10.0,
+                labels.clone(),
+                Some("bytes".to_string()),
+            )
+            .await
+            .unwrap();
+        collector
+            .set_gauge(
+                "test_gauge",
+                20.0,
+                labels.clone(),
+                Some("bytes".to_string()),
+            )
+            .await
+            .unwrap();
+        collector
+            .set_gauge("test_gauge", 30.0, labels, Some("bytes".to_string()))
+            .await
+            .unwrap();
+
         let summary = collector.get_metric_summary("test_gauge").await.unwrap();
         assert_eq!(summary.count, 3);
         assert_eq!(summary.avg, 20.0);

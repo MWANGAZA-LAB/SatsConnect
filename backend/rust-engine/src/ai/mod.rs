@@ -1,7 +1,7 @@
+pub mod behavioral_analysis;
 pub mod fraud_detection;
 pub mod machine_learning;
-pub mod behavioral_analysis;
 
-pub use fraud_detection::{FraudDetectionService, FraudScore, RiskLevel, FraudPattern};
-pub use machine_learning::{MLModel, ModelType, ModelConfig, PredictionResult};
-pub use behavioral_analysis::{BehavioralAnalyzer, UserBehavior, BehaviorPattern, AnomalyScore};
+pub use behavioral_analysis::{AnomalyScore, BehaviorPattern, BehavioralAnalyzer, UserBehavior};
+pub use fraud_detection::{FraudDetectionService, FraudPattern, FraudScore, RiskLevel};
+pub use machine_learning::{MLModel, ModelConfig, ModelType, PredictionResult};

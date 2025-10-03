@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelType {
@@ -73,17 +73,21 @@ impl MLModel {
     }
 
     pub async fn train(&mut self, training_data: TrainingData) -> Result<ModelMetrics> {
-        info!("Training model {} with {} samples", self.model_id, training_data.features.len());
-        
+        info!(
+            "Training model {} with {} samples",
+            self.model_id,
+            training_data.features.len()
+        );
+
         // Validate training data
         if training_data.features.is_empty() {
             return Err(anyhow::anyhow!("No training data provided"));
         }
-        
+
         if training_data.features.len() != training_data.labels.len() {
             return Err(anyhow::anyhow!("Features and labels length mismatch"));
         }
-        
+
         // Simulate model training based on type
         let metrics = match self.model_type {
             ModelType::RandomForest => self.train_random_forest(&training_data).await?,
@@ -92,12 +96,15 @@ impl MLModel {
             ModelType::LogisticRegression => self.train_logistic_regression(&training_data).await?,
             ModelType::IsolationForest => self.train_isolation_forest(&training_data).await?,
         };
-        
+
         self.is_trained = true;
         self.metrics = Some(metrics.clone());
         self.last_trained = Some(chrono::Utc::now());
-        
-        info!("Model {} training completed with accuracy: {:.4}", self.model_id, metrics.accuracy);
+
+        info!(
+            "Model {} training completed with accuracy: {:.4}",
+            self.model_id, metrics.accuracy
+        );
         Ok(metrics)
     }
 
@@ -105,11 +112,11 @@ impl MLModel {
         if !self.is_trained {
             return Err(anyhow::anyhow!("Model not trained"));
         }
-        
+
         if features.len() != self.config.input_features.len() {
             return Err(anyhow::anyhow!("Feature count mismatch"));
         }
-        
+
         // Simulate prediction based on model type
         let prediction = match self.model_type {
             ModelType::RandomForest => self.predict_random_forest(&features).await?,
@@ -118,9 +125,9 @@ impl MLModel {
             ModelType::LogisticRegression => self.predict_logistic_regression(&features).await?,
             ModelType::IsolationForest => self.predict_isolation_forest(&features).await?,
         };
-        
+
         let confidence = self.calculate_confidence(&prediction);
-        
+
         Ok(PredictionResult {
             prediction,
             confidence,
@@ -145,123 +152,123 @@ impl MLModel {
     async fn train_random_forest(&self, data: &TrainingData) -> Result<ModelMetrics> {
         // Simulate Random Forest training
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         Ok(ModelMetrics {
             accuracy: 0.85 + (rand::random::<f64>() * 0.1),
             precision: 0.82 + (rand::random::<f64>() * 0.1),
             recall: 0.80 + (rand::random::<f64>() * 0.1),
             f1_score: 0.81 + (rand::random::<f64>() * 0.1),
             auc_roc: 0.88 + (rand::random::<f64>() * 0.1),
-            confusion_matrix: vec![
-                vec![45, 5],
-                vec![8, 42],
-            ],
+            confusion_matrix: vec![vec![45, 5], vec![8, 42]],
         })
     }
 
     async fn train_neural_network(&self, data: &TrainingData) -> Result<ModelMetrics> {
         // Simulate Neural Network training
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-        
+
         Ok(ModelMetrics {
             accuracy: 0.87 + (rand::random::<f64>() * 0.1),
             precision: 0.84 + (rand::random::<f64>() * 0.1),
             recall: 0.83 + (rand::random::<f64>() * 0.1),
             f1_score: 0.835 + (rand::random::<f64>() * 0.1),
             auc_roc: 0.90 + (rand::random::<f64>() * 0.1),
-            confusion_matrix: vec![
-                vec![47, 3],
-                vec![6, 44],
-            ],
+            confusion_matrix: vec![vec![47, 3], vec![6, 44]],
         })
     }
 
     async fn train_gradient_boosting(&self, data: &TrainingData) -> Result<ModelMetrics> {
         // Simulate Gradient Boosting training
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
-        
+
         Ok(ModelMetrics {
             accuracy: 0.89 + (rand::random::<f64>() * 0.08),
             precision: 0.86 + (rand::random::<f64>() * 0.08),
             recall: 0.85 + (rand::random::<f64>() * 0.08),
             f1_score: 0.855 + (rand::random::<f64>() * 0.08),
             auc_roc: 0.92 + (rand::random::<f64>() * 0.08),
-            confusion_matrix: vec![
-                vec![48, 2],
-                vec![5, 45],
-            ],
+            confusion_matrix: vec![vec![48, 2], vec![5, 45]],
         })
     }
 
     async fn train_logistic_regression(&self, data: &TrainingData) -> Result<ModelMetrics> {
         // Simulate Logistic Regression training
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        
+
         Ok(ModelMetrics {
             accuracy: 0.82 + (rand::random::<f64>() * 0.1),
             precision: 0.79 + (rand::random::<f64>() * 0.1),
             recall: 0.78 + (rand::random::<f64>() * 0.1),
             f1_score: 0.785 + (rand::random::<f64>() * 0.1),
             auc_roc: 0.85 + (rand::random::<f64>() * 0.1),
-            confusion_matrix: vec![
-                vec![43, 7],
-                vec![9, 41],
-            ],
+            confusion_matrix: vec![vec![43, 7], vec![9, 41]],
         })
     }
 
     async fn train_isolation_forest(&self, data: &TrainingData) -> Result<ModelMetrics> {
         // Simulate Isolation Forest training
         tokio::time::sleep(tokio::time::Duration::from_millis(80)).await;
-        
+
         Ok(ModelMetrics {
             accuracy: 0.88 + (rand::random::<f64>() * 0.1),
             precision: 0.85 + (rand::random::<f64>() * 0.1),
             recall: 0.84 + (rand::random::<f64>() * 0.1),
             f1_score: 0.845 + (rand::random::<f64>() * 0.1),
             auc_roc: 0.91 + (rand::random::<f64>() * 0.1),
-            confusion_matrix: vec![
-                vec![46, 4],
-                vec![7, 43],
-            ],
+            confusion_matrix: vec![vec![46, 4], vec![7, 43]],
         })
     }
 
     async fn predict_random_forest(&self, features: &[f64]) -> Result<Vec<f64>> {
         // Simulate Random Forest prediction
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        Ok(vec![0.2 + (rand::random::<f64>() * 0.6), 0.8 - (rand::random::<f64>() * 0.6)])
+        Ok(vec![
+            0.2 + (rand::random::<f64>() * 0.6),
+            0.8 - (rand::random::<f64>() * 0.6),
+        ])
     }
 
     async fn predict_neural_network(&self, features: &[f64]) -> Result<Vec<f64>> {
         // Simulate Neural Network prediction
         tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
-        Ok(vec![0.15 + (rand::random::<f64>() * 0.7), 0.85 - (rand::random::<f64>() * 0.7)])
+        Ok(vec![
+            0.15 + (rand::random::<f64>() * 0.7),
+            0.85 - (rand::random::<f64>() * 0.7),
+        ])
     }
 
     async fn predict_gradient_boosting(&self, features: &[f64]) -> Result<Vec<f64>> {
         // Simulate Gradient Boosting prediction
         tokio::time::sleep(tokio::time::Duration::from_millis(12)).await;
-        Ok(vec![0.1 + (rand::random::<f64>() * 0.8), 0.9 - (rand::random::<f64>() * 0.8)])
+        Ok(vec![
+            0.1 + (rand::random::<f64>() * 0.8),
+            0.9 - (rand::random::<f64>() * 0.8),
+        ])
     }
 
     async fn predict_logistic_regression(&self, features: &[f64]) -> Result<Vec<f64>> {
         // Simulate Logistic Regression prediction
         tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
-        Ok(vec![0.25 + (rand::random::<f64>() * 0.5), 0.75 - (rand::random::<f64>() * 0.5)])
+        Ok(vec![
+            0.25 + (rand::random::<f64>() * 0.5),
+            0.75 - (rand::random::<f64>() * 0.5),
+        ])
     }
 
     async fn predict_isolation_forest(&self, features: &[f64]) -> Result<Vec<f64>> {
         // Simulate Isolation Forest prediction
         tokio::time::sleep(tokio::time::Duration::from_millis(8)).await;
-        Ok(vec![0.18 + (rand::random::<f64>() * 0.64), 0.82 - (rand::random::<f64>() * 0.64)])
+        Ok(vec![
+            0.18 + (rand::random::<f64>() * 0.64),
+            0.82 - (rand::random::<f64>() * 0.64),
+        ])
     }
 
     fn calculate_confidence(&self, prediction: &[f64]) -> f64 {
         if prediction.is_empty() {
             return 0.0;
         }
-        
+
         // Calculate confidence as the maximum probability
         prediction.iter().fold(0.0, |acc, &x| acc.max(x))
     }
@@ -293,7 +300,7 @@ mod tests {
             validation_split: 0.2,
             hyperparameters: HashMap::new(),
         };
-        
+
         let model = MLModel::new("test_model".to_string(), config);
         assert_eq!(model.model_id, "test_model");
         assert!(!model.is_trained);
@@ -309,15 +316,15 @@ mod tests {
             validation_split: 0.2,
             hyperparameters: HashMap::new(),
         };
-        
+
         let mut model = MLModel::new("test_model".to_string(), config);
-        
+
         let training_data = TrainingData {
             features: vec![vec![1.0, 2.0], vec![3.0, 4.0]],
             labels: vec![0.0, 1.0],
             metadata: HashMap::new(),
         };
-        
+
         let result = model.train(training_data).await;
         assert!(result.is_ok());
         assert!(model.is_trained);
@@ -333,9 +340,9 @@ mod tests {
             validation_split: 0.2,
             hyperparameters: HashMap::new(),
         };
-        
+
         let mut model = MLModel::new("test_model".to_string(), config);
-        
+
         // Train the model first
         let training_data = TrainingData {
             features: vec![vec![1.0, 2.0], vec![3.0, 4.0]],
@@ -343,7 +350,7 @@ mod tests {
             metadata: HashMap::new(),
         };
         model.train(training_data).await.unwrap();
-        
+
         // Make prediction
         let prediction = model.predict(vec![1.5, 2.5]).await;
         assert!(prediction.is_ok());

@@ -1,8 +1,8 @@
 use anyhow::Result;
-use ldk_node::{Node, Invoice, PaymentHash, PaymentPreimage};
+use ldk_node::{Invoice, Node, PaymentHash, PaymentPreimage};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, instrument};
+use tracing::{error, info, instrument};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InvoiceState {
@@ -42,9 +42,14 @@ impl InvoiceHandler {
         expiry_secs: Option<u32>,
     ) -> Result<(Invoice, PaymentHash)> {
         let node_guard = self.node.read().await;
-        let node = node_guard.as_ref().ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
+        let node = node_guard
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
 
-        info!("Creating invoice for {} msat with description: {}", amount_msat, description);
+        info!(
+            "Creating invoice for {} msat with description: {}",
+            amount_msat, description
+        );
 
         let invoice = node.receive_payment(
             amount_msat,
@@ -53,7 +58,7 @@ impl InvoiceHandler {
         )?;
 
         let payment_hash = invoice.payment_hash();
-        
+
         info!("Invoice created successfully: {}", invoice.to_string());
         Ok((invoice, payment_hash))
     }
@@ -62,14 +67,14 @@ impl InvoiceHandler {
     #[instrument(skip(self))]
     pub async fn validate_invoice(&self, invoice_str: &str) -> Result<InvoiceInfo> {
         let invoice: Invoice = invoice_str.parse()?;
-        
+
         // Check if invoice is expired
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs();
-        
+
         let is_expired = invoice.expiry_time() < now as u32;
-        
+
         let state = if is_expired {
             InvoiceState::Expired
         } else {
@@ -93,7 +98,9 @@ impl InvoiceHandler {
     #[instrument(skip(self))]
     pub async fn check_payment(&self, payment_hash: &PaymentHash) -> Result<bool> {
         let node_guard = self.node.read().await;
-        let node = node_guard.as_ref().ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
+        let node = node_guard
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
 
         // Check if payment has been received
         let payments = node.list_payments();
@@ -101,7 +108,11 @@ impl InvoiceHandler {
             payment.payment_hash() == *payment_hash && payment.status().is_successful()
         });
 
-        info!("Payment check for {}: {}", payment_hash, if is_paid { "PAID" } else { "PENDING" });
+        info!(
+            "Payment check for {}: {}",
+            payment_hash,
+            if is_paid { "PAID" } else { "PENDING" }
+        );
         Ok(is_paid)
     }
 
@@ -113,7 +124,9 @@ impl InvoiceHandler {
         payment_preimage: &PaymentPreimage,
     ) -> Result<()> {
         let node_guard = self.node.read().await;
-        let node = node_guard.as_ref().ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
+        let node = node_guard
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
 
         info!("Processing payment for hash: {}", payment_hash);
 
@@ -128,7 +141,9 @@ impl InvoiceHandler {
     #[instrument(skip(self))]
     pub async fn list_invoices(&self) -> Result<Vec<InvoiceInfo>> {
         let node_guard = self.node.read().await;
-        let node = node_guard.as_ref().ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
+        let node = node_guard
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Lightning node not initialized"))?;
 
         let payments = node.list_payments();
         let mut invoices = Vec::new();
@@ -160,11 +175,11 @@ impl InvoiceHandler {
     #[instrument(skip(self))]
     pub async fn cancel_invoice(&self, payment_hash: &PaymentHash) -> Result<()> {
         info!("Cancelling invoice: {}", payment_hash);
-        
+
         // Note: LDK-Node doesn't have a direct cancel invoice method
         // In a real implementation, you would track invoice state manually
         // and mark it as cancelled in your database
-        
+
         info!("Invoice cancelled: {}", payment_hash);
         Ok(())
     }

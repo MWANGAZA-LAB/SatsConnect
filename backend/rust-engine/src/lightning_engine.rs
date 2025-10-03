@@ -31,7 +31,7 @@ impl LightningEngine {
             config,
         }
     }
-    
+
     /// Create a new Lightning Engine instance with configuration
     pub fn with_config(config: LightningConfig) -> Self {
         Self {
@@ -95,7 +95,7 @@ impl LightningEngine {
         // Derive the master private key
         let secp = Secp256k1::new();
         let master_key = ExtendedPrivateKey::new_master(self.config.network, &seed)?;
-        
+
         // Derive the Lightning node private key (m/84'/0'/0'/0/0 for mainnet, m/84'/1'/0'/0/0 for testnet)
         let derivation_path = match self.config.network {
             Network::Bitcoin => DerivationPath::from_str("m/84'/0'/0'/0/0")?,

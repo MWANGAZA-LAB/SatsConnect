@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{timeout, Duration};
-use tracing::{info, error, warn, instrument};
+use tracing::{error, info, instrument, warn};
 use uuid::Uuid;
 
 /// High-performance payment processor with async operations and retry logic
@@ -69,13 +69,13 @@ impl PaymentProcessor {
     #[instrument(skip(self))]
     pub async fn initialize(&self) -> Result<()> {
         info!("Initializing high-performance payment processor");
-        
+
         // Initialize Lightning engine
         self.lightning_engine.initialize().await?;
-        
+
         // Start background retry processor
         self.start_retry_processor().await;
-        
+
         info!("Payment processor initialized successfully");
         Ok(())
     }
@@ -91,8 +91,11 @@ impl PaymentProcessor {
         description: String,
     ) -> Result<Payment> {
         let payment_id = payment_id.unwrap_or_else(|| Self::generate_id());
-        
-        info!("Processing payment: {} for {} sats", payment_id, amount_sats);
+
+        info!(
+            "Processing payment: {} for {} sats",
+            payment_id, amount_sats
+        );
 
         // Create payment record
         let mut payment = Payment {
@@ -131,20 +134,25 @@ impl PaymentProcessor {
     #[instrument(skip(self))]
     async fn process_payment_async(&self, payment_id: String) -> Result<()> {
         let mut retry_count = 0;
-        
+
         while retry_count <= self.max_retries {
             // Update status to processing
-            self.update_payment_status(&payment_id, PaymentStatus::Processing, None).await?;
+            self.update_payment_status(&payment_id, PaymentStatus::Processing, None)
+                .await?;
 
             // Process payment with timeout
             let result = timeout(Duration::from_secs(30), async {
-                self.lightning_engine.send_payment(&self.get_payment_invoice(&payment_id).await?).await
-            }).await;
+                self.lightning_engine
+                    .send_payment(&self.get_payment_invoice(&payment_id).await?)
+                    .await
+            })
+            .await;
 
             match result {
                 Ok(Ok((payment_hash, status))) => {
                     // Payment succeeded
-                    self.update_payment_success(&payment_id, payment_hash, status).await?;
+                    self.update_payment_success(&payment_id, payment_hash, status)
+                        .await?;
                     info!("Payment {} processed successfully", payment_id);
                     return Ok(());
                 }
@@ -152,17 +160,25 @@ impl PaymentProcessor {
                     // Payment failed, check if we should retry
                     if retry_count < self.max_retries {
                         retry_count += 1;
-                        warn!("Payment {} failed (attempt {}), retrying: {}", payment_id, retry_count, e);
-                        
+                        warn!(
+                            "Payment {} failed (attempt {}), retrying: {}",
+                            payment_id, retry_count, e
+                        );
+
                         // Add to retry queue
-                        self.add_to_retry_queue(&payment_id, retry_count, e.to_string()).await?;
-                        
+                        self.add_to_retry_queue(&payment_id, retry_count, e.to_string())
+                            .await?;
+
                         // Wait before retry
                         tokio::time::sleep(self.retry_delay * retry_count).await;
                     } else {
                         // Max retries exceeded
-                        self.update_payment_failure(&payment_id, e.to_string()).await?;
-                        error!("Payment {} failed after {} retries: {}", payment_id, self.max_retries, e);
+                        self.update_payment_failure(&payment_id, e.to_string())
+                            .await?;
+                        error!(
+                            "Payment {} failed after {} retries: {}",
+                            payment_id, self.max_retries, e
+                        );
                         return Err(e);
                     }
                 }
@@ -171,12 +187,17 @@ impl PaymentProcessor {
                     let error_msg = "Payment processing timed out".to_string();
                     if retry_count < self.max_retries {
                         retry_count += 1;
-                        warn!("Payment {} timed out (attempt {}), retrying", payment_id, retry_count);
-                        
-                        self.add_to_retry_queue(&payment_id, retry_count, error_msg.clone()).await?;
+                        warn!(
+                            "Payment {} timed out (attempt {}), retrying",
+                            payment_id, retry_count
+                        );
+
+                        self.add_to_retry_queue(&payment_id, retry_count, error_msg.clone())
+                            .await?;
                         tokio::time::sleep(self.retry_delay * retry_count).await;
                     } else {
-                        self.update_payment_failure(&payment_id, error_msg.clone()).await?;
+                        self.update_payment_failure(&payment_id, error_msg.clone())
+                            .await?;
                         return Err(anyhow::anyhow!(error_msg));
                     }
                 }
@@ -230,12 +251,24 @@ impl PaymentProcessor {
     pub async fn get_metrics(&self) -> Result<PaymentMetrics> {
         let payments = self.payments.read().await;
         let retry_queue = self.retry_queue.read().await;
-        
+
         let total_payments = payments.len();
-        let pending_payments = payments.values().filter(|p| p.status == PaymentStatus::Pending).count();
-        let processing_payments = payments.values().filter(|p| p.status == PaymentStatus::Processing).count();
-        let succeeded_payments = payments.values().filter(|p| p.status == PaymentStatus::Succeeded).count();
-        let failed_payments = payments.values().filter(|p| p.status == PaymentStatus::Failed).count();
+        let pending_payments = payments
+            .values()
+            .filter(|p| p.status == PaymentStatus::Pending)
+            .count();
+        let processing_payments = payments
+            .values()
+            .filter(|p| p.status == PaymentStatus::Processing)
+            .count();
+        let succeeded_payments = payments
+            .values()
+            .filter(|p| p.status == PaymentStatus::Succeeded)
+            .count();
+        let failed_payments = payments
+            .values()
+            .filter(|p| p.status == PaymentStatus::Failed)
+            .count();
         let retry_queue_size = retry_queue.len();
 
         Ok(PaymentMetrics {
@@ -258,10 +291,10 @@ impl PaymentProcessor {
         let processor = self.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(10));
-            
+
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = processor.process_retry_queue().await {
                     error!("Retry processor error: {}", e);
                 }
@@ -274,7 +307,7 @@ impl PaymentProcessor {
         let now = Utc::now();
         let mut retry_queue = self.retry_queue.write().await;
         let mut to_retry = Vec::new();
-        
+
         // Find items ready for retry
         let mut i = 0;
         while i < retry_queue.len() {
@@ -284,23 +317,31 @@ impl PaymentProcessor {
                 i += 1;
             }
         }
-        
+
         drop(retry_queue);
-        
+
         // Process retry items
         for item in to_retry {
-            info!("Retrying payment: {} (attempt {})", item.payment_id, item.retry_count);
-            
+            info!(
+                "Retrying payment: {} (attempt {})",
+                item.payment_id, item.retry_count
+            );
+
             if let Err(e) = self.process_payment_async(item.payment_id.clone()).await {
                 error!("Retry failed for payment {}: {}", item.payment_id, e);
             }
         }
-        
+
         Ok(())
     }
 
     /// Add payment to retry queue
-    async fn add_to_retry_queue(&self, payment_id: &str, retry_count: u32, error: String) -> Result<()> {
+    async fn add_to_retry_queue(
+        &self,
+        payment_id: &str,
+        retry_count: u32,
+        error: String,
+    ) -> Result<()> {
         let mut retry_queue = self.retry_queue.write().await;
         retry_queue.push(RetryItem {
             payment_id: payment_id.to_string(),
@@ -312,7 +353,12 @@ impl PaymentProcessor {
     }
 
     /// Update payment status
-    async fn update_payment_status(&self, payment_id: &str, status: PaymentStatus, error: Option<String>) -> Result<()> {
+    async fn update_payment_status(
+        &self,
+        payment_id: &str,
+        status: PaymentStatus,
+        error: Option<String>,
+    ) -> Result<()> {
         let mut payments = self.payments.write().await;
         if let Some(payment) = payments.get_mut(payment_id) {
             payment.status = status;
@@ -323,7 +369,12 @@ impl PaymentProcessor {
     }
 
     /// Update payment success
-    async fn update_payment_success(&self, payment_id: &str, payment_hash: String, status: String) -> Result<()> {
+    async fn update_payment_success(
+        &self,
+        payment_id: &str,
+        payment_hash: String,
+        status: String,
+    ) -> Result<()> {
         let mut payments = self.payments.write().await;
         if let Some(payment) = payments.get_mut(payment_id) {
             payment.status = PaymentStatus::Succeeded;
@@ -391,11 +442,8 @@ mod tests {
     #[tokio::test]
     async fn test_payment_processor_creation() {
         let temp_dir = tempdir().unwrap();
-        let processor = PaymentProcessor::new(
-            temp_dir.path().to_path_buf(),
-            Network::Testnet,
-        );
-        
+        let processor = PaymentProcessor::new(temp_dir.path().to_path_buf(), Network::Testnet);
+
         assert_eq!(processor.max_retries, 3);
         assert_eq!(processor.retry_delay, Duration::from_secs(5));
     }
@@ -403,19 +451,18 @@ mod tests {
     #[tokio::test]
     async fn test_payment_creation() {
         let temp_dir = tempdir().unwrap();
-        let processor = PaymentProcessor::new(
-            temp_dir.path().to_path_buf(),
-            Network::Testnet,
-        );
-        
-        let payment = processor.process_payment(
-            None,
-            "wallet_123".to_string(),
-            1000,
-            "lnbc10n1...".to_string(),
-            "Test payment".to_string(),
-        ).await;
-        
+        let processor = PaymentProcessor::new(temp_dir.path().to_path_buf(), Network::Testnet);
+
+        let payment = processor
+            .process_payment(
+                None,
+                "wallet_123".to_string(),
+                1000,
+                "lnbc10n1...".to_string(),
+                "Test payment".to_string(),
+            )
+            .await;
+
         assert!(payment.is_ok());
         let payment = payment.unwrap();
         assert_eq!(payment.amount_sats, 1000);

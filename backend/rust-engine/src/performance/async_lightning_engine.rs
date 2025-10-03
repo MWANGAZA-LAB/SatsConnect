@@ -1,14 +1,14 @@
 use anyhow::Result;
 use bitcoin::Network;
-use lightning_invoice::{Invoice, Currency};
 use ldk_node::{Builder, Node, NodeError};
+use lightning_invoice::{Currency, Invoice};
 use lru::LruCache;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{timeout, Duration};
-use tracing::{info, error, warn, instrument};
-use serde::{Deserialize, Serialize};
+use tracing::{error, info, instrument, warn};
 
 /// High-performance async Lightning engine with connection pooling and caching
 #[derive(Debug)]
@@ -68,7 +68,9 @@ impl AsyncLightningEngine {
             data_dir: data_dir.clone(),
             connection_pool: Arc::new(RwLock::new(Vec::new())),
             max_connections: 10,
-            cache: Arc::new(RwLock::new(LruCache::new(std::num::NonZeroUsize::new(1000).unwrap()))),
+            cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(1000).unwrap(),
+            ))),
         }
     }
 
@@ -80,7 +82,7 @@ impl AsyncLightningEngine {
         // Create primary node
         let primary_node = self.create_node().await?;
         let primary_arc = Arc::new(primary_node);
-        
+
         // Store primary node
         {
             let mut node_guard = self.node.write().await;
@@ -91,7 +93,7 @@ impl AsyncLightningEngine {
         {
             let mut pool_guard = self.connection_pool.write().await;
             pool_guard.push(primary_arc.clone());
-            
+
             // Create additional connections for load balancing
             for _ in 1..self.max_connections {
                 match self.create_node().await {
@@ -104,7 +106,10 @@ impl AsyncLightningEngine {
             }
         }
 
-        info!("Lightning engine initialized with {} connections", self.max_connections);
+        info!(
+            "Lightning engine initialized with {} connections",
+            self.max_connections
+        );
         Ok(())
     }
 
@@ -138,7 +143,7 @@ impl AsyncLightningEngine {
             Ok(node.clone())
         } else {
             drop(pool_guard);
-            
+
             // Fallback to primary node
             let node_guard = self.node.read().await;
             if let Some(node) = node_guard.as_ref() {
@@ -153,7 +158,7 @@ impl AsyncLightningEngine {
     #[instrument(skip(self))]
     pub async fn get_balance(&self) -> Result<(u64, u64)> {
         let cache_key = "balance".to_string();
-        
+
         // Check cache first
         {
             let mut cache_guard = self.cache.write().await;
@@ -167,13 +172,14 @@ impl AsyncLightningEngine {
 
         // Get fresh data
         let node = self.get_node().await?;
-        
+
         // Use timeout to prevent hanging
         let balance_result = timeout(Duration::from_secs(5), async {
             let onchain_balance = node.on_chain_balance()?;
             let lightning_balance = node.total_spendable_on_chain_balance_sats()?;
             Ok::<(u64, u64), anyhow::Error>((onchain_balance, lightning_balance))
-        }).await;
+        })
+        .await;
 
         let balance = match balance_result {
             Ok(Ok(balance)) => balance,
@@ -184,14 +190,20 @@ impl AsyncLightningEngine {
         // Cache the result
         {
             let mut cache_guard = self.cache.write().await;
-            cache_guard.insert(cache_key, CachedData {
-                data: serde_json::to_value(balance)?,
-                timestamp: chrono::Utc::now().timestamp() as u64,
-                ttl: 30, // 30 seconds cache
-            });
+            cache_guard.insert(
+                cache_key,
+                CachedData {
+                    data: serde_json::to_value(balance)?,
+                    timestamp: chrono::Utc::now().timestamp() as u64,
+                    ttl: 30, // 30 seconds cache
+                },
+            );
         }
 
-        info!("Balance retrieved - On-chain: {} sats, Lightning: {} sats", balance.0, balance.1);
+        info!(
+            "Balance retrieved - On-chain: {} sats, Lightning: {} sats",
+            balance.0, balance.1
+        );
         Ok(balance)
     }
 
@@ -199,8 +211,11 @@ impl AsyncLightningEngine {
     #[instrument(skip(self))]
     pub async fn generate_invoice(&self, amount_sats: u64, memo: &str) -> Result<(String, String)> {
         let node = self.get_node().await?;
-        
-        info!("Generating invoice for {} sats with memo: {}", amount_sats, memo);
+
+        info!(
+            "Generating invoice for {} sats with memo: {}",
+            amount_sats, memo
+        );
 
         // Use timeout for invoice generation
         let invoice_result = timeout(Duration::from_secs(10), async {
@@ -208,7 +223,8 @@ impl AsyncLightningEngine {
             let payment_hash = invoice.payment_hash().to_string();
             let invoice_string = invoice.to_string();
             Ok::<(String, String), anyhow::Error>((invoice_string, payment_hash))
-        }).await;
+        })
+        .await;
 
         let (invoice_string, payment_hash) = match invoice_result {
             Ok(Ok(result)) => result,
@@ -216,7 +232,10 @@ impl AsyncLightningEngine {
             Err(_) => return Err(anyhow::anyhow!("Invoice generation timed out")),
         };
 
-        info!("Invoice generated successfully - Payment Hash: {}", payment_hash);
+        info!(
+            "Invoice generated successfully - Payment Hash: {}",
+            payment_hash
+        );
         Ok((invoice_string, payment_hash))
     }
 
@@ -224,8 +243,11 @@ impl AsyncLightningEngine {
     #[instrument(skip(self))]
     pub async fn send_payment(&self, invoice: &str) -> Result<(String, String)> {
         let node = self.get_node().await?;
-        
-        info!("Sending payment for invoice: {}", &invoice[..50.min(invoice.len())]);
+
+        info!(
+            "Sending payment for invoice: {}",
+            &invoice[..50.min(invoice.len())]
+        );
 
         // Parse the invoice
         let invoice = Invoice::from_str(invoice)?;
@@ -234,13 +256,14 @@ impl AsyncLightningEngine {
         // Send payment with timeout and retry logic
         let payment_result = timeout(Duration::from_secs(30), async {
             let payment_id = node.send_payment(&invoice)?;
-            
+
             // In a real implementation, you would listen for payment events
             // For now, we'll simulate async processing
             tokio::time::sleep(Duration::from_millis(100)).await;
-            
+
             Ok::<String, anyhow::Error>(payment_id)
-        }).await;
+        })
+        .await;
 
         let _payment_id = match payment_result {
             Ok(Ok(id)) => id,
@@ -251,7 +274,10 @@ impl AsyncLightningEngine {
         // For now, assume payment succeeds
         let status = "SUCCEEDED".to_string();
 
-        info!("Payment sent successfully - Payment Hash: {}, Status: {}", payment_hash, status);
+        info!(
+            "Payment sent successfully - Payment Hash: {}, Status: {}",
+            payment_hash, status
+        );
         Ok((payment_hash, status))
     }
 
@@ -259,7 +285,7 @@ impl AsyncLightningEngine {
     #[instrument(skip(self))]
     pub async fn get_payment_status(&self, payment_hash: &str) -> Result<String> {
         let cache_key = format!("payment_status_{}", payment_hash);
-        
+
         // Check cache first
         {
             let mut cache_guard = self.cache.write().await;
@@ -278,11 +304,14 @@ impl AsyncLightningEngine {
         // Cache the result
         {
             let mut cache_guard = self.cache.write().await;
-            cache_guard.insert(cache_key, CachedData {
-                data: serde_json::to_value(status.clone())?,
-                timestamp: chrono::Utc::now().timestamp() as u64,
-                ttl: 60, // 1 minute cache
-            });
+            cache_guard.insert(
+                cache_key,
+                CachedData {
+                    data: serde_json::to_value(status.clone())?,
+                    timestamp: chrono::Utc::now().timestamp() as u64,
+                    ttl: 60, // 1 minute cache
+                },
+            );
         }
 
         Ok(status)
@@ -305,7 +334,7 @@ impl AsyncLightningEngine {
     pub async fn get_metrics(&self) -> Result<PerformanceMetrics> {
         let pool_guard = self.connection_pool.read().await;
         let cache_guard = self.cache.read().await;
-        
+
         Ok(PerformanceMetrics {
             active_connections: pool_guard.len(),
             max_connections: self.max_connections,
@@ -331,11 +360,8 @@ mod tests {
     #[tokio::test]
     async fn test_async_lightning_engine_creation() {
         let temp_dir = tempdir().unwrap();
-        let engine = AsyncLightningEngine::new(
-            temp_dir.path().to_path_buf(),
-            Network::Testnet,
-        );
-        
+        let engine = AsyncLightningEngine::new(temp_dir.path().to_path_buf(), Network::Testnet);
+
         // Test that engine can be created
         assert_eq!(engine.max_connections, 10);
     }
@@ -343,11 +369,8 @@ mod tests {
     #[tokio::test]
     async fn test_connection_pool() {
         let temp_dir = tempdir().unwrap();
-        let engine = AsyncLightningEngine::new(
-            temp_dir.path().to_path_buf(),
-            Network::Testnet,
-        );
-        
+        let engine = AsyncLightningEngine::new(temp_dir.path().to_path_buf(), Network::Testnet);
+
         // Test connection pool initialization
         let pool_guard = engine.connection_pool.read().await;
         assert_eq!(pool_guard.len(), 0);

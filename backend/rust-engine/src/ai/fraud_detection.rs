@@ -1,10 +1,10 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// AI-powered fraud detection system for SatsConnect
 #[derive(Debug)]
@@ -140,7 +140,10 @@ impl FraudDetector {
     /// Analyze transaction for fraud
     #[instrument(skip(self, transaction))]
     pub async fn analyze_transaction(&self, transaction: &TransactionRecord) -> Result<FraudScore> {
-        info!("Analyzing transaction for fraud: {}", transaction.transaction_id);
+        info!(
+            "Analyzing transaction for fraud: {}",
+            transaction.transaction_id
+        );
 
         let mut factors = Vec::new();
         let mut ml_score = 0.0;
@@ -200,8 +203,10 @@ impl FraudDetector {
         // Store transaction for future analysis
         self.store_transaction(transaction.clone()).await?;
 
-        info!("Fraud analysis completed for transaction: {} (score: {:.2})", 
-              transaction.transaction_id, overall_score);
+        info!(
+            "Fraud analysis completed for transaction: {} (score: {:.2})",
+            transaction.transaction_id, overall_score
+        );
 
         Ok(fraud_score)
     }
@@ -209,22 +214,23 @@ impl FraudDetector {
     /// Calculate ML-based fraud score
     async fn calculate_ml_score(&self, transaction: &TransactionRecord) -> Result<f64> {
         let models = self.models.read().await;
-        
+
         if models.is_empty() {
             return Ok(0.0);
         }
 
         // Use the most accurate model
-        let best_model = models.iter()
+        let best_model = models
+            .iter()
             .max_by(|a, b| a.accuracy.partial_cmp(&b.accuracy).unwrap())
             .unwrap();
 
         // Extract features for ML model
         let features = self.extract_features(transaction).await?;
-        
+
         // Simulate ML prediction (in real implementation, this would use actual ML model)
         let score = self.simulate_ml_prediction(&features, best_model).await?;
-        
+
         Ok(score)
     }
 
@@ -256,13 +262,20 @@ impl FraudDetector {
         }
 
         // Analyze transaction patterns
-        let velocity_score = self.calculate_velocity_score(transaction, &user_transactions).await?;
-        let amount_score = self.calculate_amount_score(transaction, &user_transactions).await?;
-        let temporal_score = self.calculate_temporal_score(transaction, &user_transactions).await?;
+        let velocity_score = self
+            .calculate_velocity_score(transaction, &user_transactions)
+            .await?;
+        let amount_score = self
+            .calculate_amount_score(transaction, &user_transactions)
+            .await?;
+        let temporal_score = self
+            .calculate_temporal_score(transaction, &user_transactions)
+            .await?;
 
         // Weighted average
-        let behavioral_score = (velocity_score * 0.4) + (amount_score * 0.3) + (temporal_score * 0.3);
-        
+        let behavioral_score =
+            (velocity_score * 0.4) + (amount_score * 0.3) + (temporal_score * 0.3);
+
         Ok(behavioral_score)
     }
 
@@ -398,23 +411,31 @@ impl FraudDetector {
         condition: &PatternCondition,
     ) -> Result<f64> {
         let field_value = self.get_field_value(transaction, &condition.field).await?;
-        
+
         match condition.operator {
-            ConditionOperator::Equals => {
-                Ok(if field_value == condition.value { 1.0 } else { 0.0 })
-            }
-            ConditionOperator::NotEquals => {
-                Ok(if field_value != condition.value { 1.0 } else { 0.0 })
-            }
+            ConditionOperator::Equals => Ok(if field_value == condition.value {
+                1.0
+            } else {
+                0.0
+            }),
+            ConditionOperator::NotEquals => Ok(if field_value != condition.value {
+                1.0
+            } else {
+                0.0
+            }),
             ConditionOperator::GreaterThan => {
-                if let (Some(field_num), Some(value_num)) = (field_value.as_f64(), condition.value.as_f64()) {
+                if let (Some(field_num), Some(value_num)) =
+                    (field_value.as_f64(), condition.value.as_f64())
+                {
                     Ok(if field_num > value_num { 1.0 } else { 0.0 })
                 } else {
                     Ok(0.0)
                 }
             }
             ConditionOperator::LessThan => {
-                if let (Some(field_num), Some(value_num)) = (field_value.as_f64(), condition.value.as_f64()) {
+                if let (Some(field_num), Some(value_num)) =
+                    (field_value.as_f64(), condition.value.as_f64())
+                {
                     Ok(if field_num < value_num { 1.0 } else { 0.0 })
                 } else {
                     Ok(0.0)
@@ -431,10 +452,17 @@ impl FraudDetector {
         field: &str,
     ) -> Result<serde_json::Value> {
         match field {
-            "amount" => Ok(serde_json::Value::Number(serde_json::Number::from(transaction.amount))),
+            "amount" => Ok(serde_json::Value::Number(serde_json::Number::from(
+                transaction.amount,
+            ))),
             "user_id" => Ok(serde_json::Value::String(transaction.user_id.clone())),
-            "transaction_type" => Ok(serde_json::Value::String(format!("{:?}", transaction.transaction_type))),
-            "timestamp" => Ok(serde_json::Value::String(transaction.timestamp.to_rfc3339())),
+            "transaction_type" => Ok(serde_json::Value::String(format!(
+                "{:?}",
+                transaction.transaction_type
+            ))),
+            "timestamp" => Ok(serde_json::Value::String(
+                transaction.timestamp.to_rfc3339(),
+            )),
             _ => Ok(serde_json::Value::Null),
         }
     }
@@ -456,7 +484,8 @@ impl FraudDetector {
 
         // User behavior features
         if !user_transactions.is_empty() {
-            let avg_amount = user_transactions.iter().map(|t| t.amount).sum::<u64>() as f64 / user_transactions.len() as f64;
+            let avg_amount = user_transactions.iter().map(|t| t.amount).sum::<u64>() as f64
+                / user_transactions.len() as f64;
             let max_amount = user_transactions.iter().map(|t| t.amount).max().unwrap() as f64;
             let transaction_count = user_transactions.len() as f64;
 
@@ -474,22 +503,23 @@ impl FraudDetector {
     async fn simulate_ml_prediction(&self, features: &[f64], _model: &MLModel) -> Result<f64> {
         // Simple heuristic-based simulation
         let mut score = 0.0;
-        
+
         // Amount-based scoring
-        if features[0] > 1000000.0 { // 1M sats
+        if features[0] > 1000000.0 {
+            // 1M sats
             score += 0.3;
         }
-        
+
         // Time-based scoring (unusual hours)
         if features[1] < 6.0 || features[1] > 22.0 {
             score += 0.2;
         }
-        
+
         // Frequency-based scoring
         if features.len() > 5 && features[5] > 10.0 {
             score += 0.2;
         }
-        
+
         Ok(score.min(1.0))
     }
 
@@ -499,13 +529,9 @@ impl FraudDetector {
             return 0.0;
         }
 
-        let total_weighted_score: f64 = factors.iter()
-            .map(|f| f.score * f.weight)
-            .sum();
-        
-        let total_weight: f64 = factors.iter()
-            .map(|f| f.weight)
-            .sum();
+        let total_weighted_score: f64 = factors.iter().map(|f| f.score * f.weight).sum();
+
+        let total_weight: f64 = factors.iter().map(|f| f.weight).sum();
 
         if total_weight > 0.0 {
             total_weighted_score / total_weight
@@ -533,10 +559,10 @@ impl FraudDetector {
         // Confidence based on number of factors and their consistency
         let factor_count = factors.len() as f64;
         let score_variance = self.calculate_score_variance(factors);
-        
+
         let consistency = 1.0 - score_variance;
         let factor_confidence = (factor_count / 3.0).min(1.0); // Max confidence with 3+ factors
-        
+
         (consistency + factor_confidence) / 2.0
     }
 
@@ -548,10 +574,12 @@ impl FraudDetector {
 
         let scores: Vec<f64> = factors.iter().map(|f| f.score).collect();
         let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let variance = scores.iter()
+        let variance = scores
+            .iter()
             .map(|&score| (score - mean).powi(2))
-            .sum::<f64>() / scores.len() as f64;
-        
+            .sum::<f64>()
+            / scores.len() as f64;
+
         variance.sqrt() / mean.max(0.001) // Normalize by mean to get coefficient of variation
     }
 
@@ -559,12 +587,12 @@ impl FraudDetector {
     async fn store_transaction(&self, transaction: TransactionRecord) -> Result<()> {
         let mut history = self.transaction_history.write().await;
         history.push(transaction);
-        
+
         // Keep only last 10000 transactions to manage memory
         if history.len() > 10000 {
             history.drain(0..1000);
         }
-        
+
         Ok(())
     }
 
@@ -644,7 +672,7 @@ impl Default for FraudDetectionConfig {
         Self {
             risk_threshold: 0.7,
             max_transaction_amount: 10_000_000, // 10M sats
-            max_daily_volume: 100_000_000, // 100M sats
+            max_daily_volume: 100_000_000,      // 100M sats
             max_hourly_transactions: 10,
             enable_ml_detection: true,
             enable_pattern_detection: true,
@@ -662,7 +690,7 @@ mod tests {
     async fn test_fraud_detector_creation() {
         let config = FraudDetectionConfig::default();
         let detector = FraudDetector::new(config);
-        
+
         let stats = detector.get_fraud_stats().await.unwrap();
         assert_eq!(stats.total_transactions, 0);
     }
@@ -671,7 +699,7 @@ mod tests {
     async fn test_fraud_analysis() {
         let config = FraudDetectionConfig::default();
         let detector = FraudDetector::new(config);
-        
+
         let transaction = TransactionRecord {
             transaction_id: "test_tx".to_string(),
             user_id: "user123".to_string(),
@@ -684,7 +712,7 @@ mod tests {
             is_fraudulent: false,
             metadata: HashMap::new(),
         };
-        
+
         let fraud_score = detector.analyze_transaction(&transaction).await.unwrap();
         assert_eq!(fraud_score.transaction_id, "test_tx");
     }

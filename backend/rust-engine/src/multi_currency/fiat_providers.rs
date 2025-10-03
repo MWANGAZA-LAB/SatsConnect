@@ -1,11 +1,16 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, error, warn, instrument};
+use tracing::{error, info, instrument, warn};
 
 /// Fiat provider trait for different payment methods
 pub trait FiatProvider: Send + Sync {
-    async fn initiate_payment(&self, amount: f64, phone: &str, reference: &str) -> Result<PaymentResponse>;
+    async fn initiate_payment(
+        &self,
+        amount: f64,
+        phone: &str,
+        reference: &str,
+    ) -> Result<PaymentResponse>;
     async fn verify_payment(&self, transaction_id: &str) -> Result<PaymentStatus>;
     async fn get_limits(&self) -> Result<PaymentLimits>;
     fn get_provider_name(&self) -> &'static str;
@@ -70,23 +75,32 @@ pub struct MpesaProvider {
 impl MpesaProvider {
     pub fn new() -> Self {
         Self {
-            consumer_key: std::env::var("MPESA_CONSUMER_KEY").unwrap_or_else(|_| "test_key".to_string()),
-            consumer_secret: std::env::var("MPESA_CONSUMER_SECRET").unwrap_or_else(|_| "test_secret".to_string()),
-            business_short_code: std::env::var("MPESA_BUSINESS_SHORT_CODE").unwrap_or_else(|_| "174379".to_string()),
+            consumer_key: std::env::var("MPESA_CONSUMER_KEY")
+                .unwrap_or_else(|_| "test_key".to_string()),
+            consumer_secret: std::env::var("MPESA_CONSUMER_SECRET")
+                .unwrap_or_else(|_| "test_secret".to_string()),
+            business_short_code: std::env::var("MPESA_BUSINESS_SHORT_CODE")
+                .unwrap_or_else(|_| "174379".to_string()),
             passkey: std::env::var("MPESA_PASSKEY").unwrap_or_else(|_| "test_passkey".to_string()),
-            callback_url: std::env::var("MPESA_CALLBACK_URL").unwrap_or_else(|_| "https://api.satsconnect.com/webhooks/mpesa".to_string()),
-            environment: std::env::var("MPESA_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string()),
+            callback_url: std::env::var("MPESA_CALLBACK_URL")
+                .unwrap_or_else(|_| "https://api.satsconnect.com/webhooks/mpesa".to_string()),
+            environment: std::env::var("MPESA_ENVIRONMENT")
+                .unwrap_or_else(|_| "sandbox".to_string()),
         }
     }
 
     async fn get_access_token(&self) -> Result<String> {
         let auth = base64::encode(format!("{}:{}", self.consumer_key, self.consumer_secret));
-        
+
         let client = reqwest::Client::new();
         let response = client
             .get(&format!(
                 "https://{}.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-                if self.environment == "production" { "api" } else { "sandbox" }
+                if self.environment == "production" {
+                    "api"
+                } else {
+                    "sandbox"
+                }
             ))
             .header("Authorization", format!("Basic {}", auth))
             .send()
@@ -112,7 +126,12 @@ impl MpesaProvider {
 
 #[async_trait::async_trait]
 impl FiatProvider for MpesaProvider {
-    async fn initiate_payment(&self, amount: f64, phone: &str, reference: &str) -> Result<PaymentResponse> {
+    async fn initiate_payment(
+        &self,
+        amount: f64,
+        phone: &str,
+        reference: &str,
+    ) -> Result<PaymentResponse> {
         info!("Initiating MPesa payment: {} KES to {}", amount, phone);
 
         let access_token = self.get_access_token().await?;
@@ -137,7 +156,11 @@ impl FiatProvider for MpesaProvider {
         let response = client
             .post(&format!(
                 "https://{}.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
-                if self.environment == "production" { "api" } else { "sandbox" }
+                if self.environment == "production" {
+                    "api"
+                } else {
+                    "sandbox"
+                }
             ))
             .header("Authorization", format!("Bearer {}", access_token))
             .header("Content-Type", "application/json")
@@ -157,21 +180,30 @@ impl FiatProvider for MpesaProvider {
         }
 
         let data: serde_json::Value = response.json().await?;
-        
+
         if data["ResponseCode"].as_str() == Some("0") {
             Ok(PaymentResponse {
                 success: true,
                 transaction_id: data["CheckoutRequestID"].as_str().map(|s| s.to_string()),
-                message: data["CustomerMessage"].as_str().unwrap_or("Payment initiated").to_string(),
+                message: data["CustomerMessage"]
+                    .as_str()
+                    .unwrap_or("Payment initiated")
+                    .to_string(),
                 error_code: None,
                 requires_otp: true,
-                otp_message: Some("Please check your phone and enter the MPesa PIN to complete the payment".to_string()),
+                otp_message: Some(
+                    "Please check your phone and enter the MPesa PIN to complete the payment"
+                        .to_string(),
+                ),
             })
         } else {
             Ok(PaymentResponse {
                 success: false,
                 transaction_id: None,
-                message: data["CustomerMessage"].as_str().unwrap_or("Payment failed").to_string(),
+                message: data["CustomerMessage"]
+                    .as_str()
+                    .unwrap_or("Payment failed")
+                    .to_string(),
                 error_code: data["ResponseCode"].as_str().map(|s| s.to_string()),
                 requires_otp: false,
                 otp_message: None,
@@ -185,8 +217,8 @@ impl FiatProvider for MpesaProvider {
         Ok(PaymentStatus {
             transaction_id: transaction_id.to_string(),
             status: PaymentState::Completed,
-            amount: 0.0, // Would be fetched from API
-            phone: "".to_string(), // Would be fetched from API
+            amount: 0.0,               // Would be fetched from API
+            phone: "".to_string(),     // Would be fetched from API
             reference: "".to_string(), // Would be fetched from API
             timestamp: chrono::Utc::now().timestamp() as u64,
             error_message: None,
@@ -223,18 +255,29 @@ pub struct AirtelMoneyProvider {
 impl AirtelMoneyProvider {
     pub fn new() -> Self {
         Self {
-            client_id: std::env::var("AIRTEL_CLIENT_ID").unwrap_or_else(|_| "test_client_id".to_string()),
-            client_secret: std::env::var("AIRTEL_CLIENT_SECRET").unwrap_or_else(|_| "test_client_secret".to_string()),
-            environment: std::env::var("AIRTEL_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string()),
+            client_id: std::env::var("AIRTEL_CLIENT_ID")
+                .unwrap_or_else(|_| "test_client_id".to_string()),
+            client_secret: std::env::var("AIRTEL_CLIENT_SECRET")
+                .unwrap_or_else(|_| "test_client_secret".to_string()),
+            environment: std::env::var("AIRTEL_ENVIRONMENT")
+                .unwrap_or_else(|_| "sandbox".to_string()),
         }
     }
 }
 
 #[async_trait::async_trait]
 impl FiatProvider for AirtelMoneyProvider {
-    async fn initiate_payment(&self, amount: f64, phone: &str, reference: &str) -> Result<PaymentResponse> {
-        info!("Initiating Airtel Money payment: {} TZS to {}", amount, phone);
-        
+    async fn initiate_payment(
+        &self,
+        amount: f64,
+        phone: &str,
+        reference: &str,
+    ) -> Result<PaymentResponse> {
+        info!(
+            "Initiating Airtel Money payment: {} TZS to {}",
+            amount, phone
+        );
+
         // Mock implementation - would integrate with Airtel Money API
         Ok(PaymentResponse {
             success: true,
@@ -288,7 +331,8 @@ pub struct MTNProvider {
 impl MTNProvider {
     pub fn new() -> Self {
         Self {
-            subscription_key: std::env::var("MTN_SUBSCRIPTION_KEY").unwrap_or_else(|_| "test_subscription_key".to_string()),
+            subscription_key: std::env::var("MTN_SUBSCRIPTION_KEY")
+                .unwrap_or_else(|_| "test_subscription_key".to_string()),
             environment: std::env::var("MTN_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string()),
             country: std::env::var("MTN_COUNTRY").unwrap_or_else(|_| "UG".to_string()),
         }
@@ -297,9 +341,17 @@ impl MTNProvider {
 
 #[async_trait::async_trait]
 impl FiatProvider for MTNProvider {
-    async fn initiate_payment(&self, amount: f64, phone: &str, reference: &str) -> Result<PaymentResponse> {
-        info!("Initiating MTN Mobile Money payment: {} to {}", amount, phone);
-        
+    async fn initiate_payment(
+        &self,
+        amount: f64,
+        phone: &str,
+        reference: &str,
+    ) -> Result<PaymentResponse> {
+        info!(
+            "Initiating MTN Mobile Money payment: {} to {}",
+            amount, phone
+        );
+
         // Mock implementation - would integrate with MTN Mobile Money API
         Ok(PaymentResponse {
             success: true,
@@ -307,7 +359,9 @@ impl FiatProvider for MTNProvider {
             message: "Payment initiated successfully".to_string(),
             error_code: None,
             requires_otp: true,
-            otp_message: Some("Please check your phone and enter the MTN Mobile Money PIN".to_string()),
+            otp_message: Some(
+                "Please check your phone and enter the MTN Mobile Money PIN".to_string(),
+            ),
         })
     }
 

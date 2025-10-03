@@ -1,10 +1,10 @@
+use super::currency_service::Currency;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use super::currency_service::Currency;
+use tracing::{error, info, instrument, warn};
 
 /// Exchange rate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,7 +33,8 @@ impl ExchangeRate {
 /// Exchange rate provider trait
 pub trait ExchangeRateProvider: Send + Sync {
     async fn get_rate(&self, currency: Currency) -> Result<ExchangeRate>;
-    async fn get_rates(&self, currencies: Vec<Currency>) -> Result<HashMap<Currency, ExchangeRate>>;
+    async fn get_rates(&self, currencies: Vec<Currency>)
+        -> Result<HashMap<Currency, ExchangeRate>>;
 }
 
 /// Multi-source exchange rate provider
@@ -87,12 +88,18 @@ impl ExchangeRateProvider for MultiSourceExchangeRateProvider {
             }
         }
 
-        Err(anyhow::anyhow!("All exchange rate providers failed for {}", currency.code()))
+        Err(anyhow::anyhow!(
+            "All exchange rate providers failed for {}",
+            currency.code()
+        ))
     }
 
-    async fn get_rates(&self, currencies: Vec<Currency>) -> Result<HashMap<Currency, ExchangeRate>> {
+    async fn get_rates(
+        &self,
+        currencies: Vec<Currency>,
+    ) -> Result<HashMap<Currency, ExchangeRate>> {
         let mut rates = HashMap::new();
-        
+
         for currency in currencies {
             match self.get_rate(currency).await {
                 Ok(rate) => {
@@ -103,7 +110,7 @@ impl ExchangeRateProvider for MultiSourceExchangeRateProvider {
                 }
             }
         }
-        
+
         Ok(rates)
     }
 }
@@ -148,7 +155,7 @@ impl ExchangeRateProvider for CoinGeckoProvider {
     async fn get_rate(&self, currency: Currency) -> Result<ExchangeRate> {
         let coin_id = self.get_coin_id(currency);
         let currency_code = self.get_currency_code(currency);
-        
+
         let url = format!(
             "{}/simple/price?ids={}&vs_currencies={}&include_24hr_change=true",
             self.base_url, coin_id, currency_code
@@ -156,18 +163,22 @@ impl ExchangeRateProvider for CoinGeckoProvider {
 
         info!("Fetching exchange rate from CoinGecko: {}", url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
             .await?;
 
         if !response.status().is_success() {
-            return Err(anyhow::anyhow!("CoinGecko API error: {}", response.status()));
+            return Err(anyhow::anyhow!(
+                "CoinGecko API error: {}",
+                response.status()
+            ));
         }
 
         let data: serde_json::Value = response.json().await?;
-        
+
         let price = data[coin_id][currency_code]
             .as_f64()
             .ok_or_else(|| anyhow::anyhow!("Invalid price data from CoinGecko"))?;
@@ -184,20 +195,27 @@ impl ExchangeRateProvider for CoinGeckoProvider {
         })
     }
 
-    async fn get_rates(&self, currencies: Vec<Currency>) -> Result<HashMap<Currency, ExchangeRate>> {
+    async fn get_rates(
+        &self,
+        currencies: Vec<Currency>,
+    ) -> Result<HashMap<Currency, ExchangeRate>> {
         let mut rates = HashMap::new();
-        
+
         for currency in currencies {
             match self.get_rate(currency).await {
                 Ok(rate) => {
                     rates.insert(currency, rate);
                 }
                 Err(e) => {
-                    error!("Failed to get rate for {} from CoinGecko: {}", currency.code(), e);
+                    error!(
+                        "Failed to get rate for {} from CoinGecko: {}",
+                        currency.code(),
+                        e
+                    );
                 }
             }
         }
-        
+
         Ok(rates)
     }
 }
@@ -230,7 +248,8 @@ impl ExchangeRateProvider for BinanceProvider {
 
         info!("Fetching exchange rate from Binance: {}", url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(std::time::Duration::from_secs(10))
             .send()
@@ -241,7 +260,7 @@ impl ExchangeRateProvider for BinanceProvider {
         }
 
         let data: serde_json::Value = response.json().await?;
-        
+
         let price = data["price"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid price data from Binance"))?
@@ -259,20 +278,27 @@ impl ExchangeRateProvider for BinanceProvider {
         })
     }
 
-    async fn get_rates(&self, currencies: Vec<Currency>) -> Result<HashMap<Currency, ExchangeRate>> {
+    async fn get_rates(
+        &self,
+        currencies: Vec<Currency>,
+    ) -> Result<HashMap<Currency, ExchangeRate>> {
         let mut rates = HashMap::new();
-        
+
         for currency in currencies {
             match self.get_rate(currency).await {
                 Ok(rate) => {
                     rates.insert(currency, rate);
                 }
                 Err(e) => {
-                    error!("Failed to get rate for {} from Binance: {}", currency.code(), e);
+                    error!(
+                        "Failed to get rate for {} from Binance: {}",
+                        currency.code(),
+                        e
+                    );
                 }
             }
         }
-        
+
         Ok(rates)
     }
 }
@@ -286,11 +312,11 @@ pub struct DefaultExchangeRateProvider {
 impl DefaultExchangeRateProvider {
     pub fn new() -> Self {
         let mut multi_provider = MultiSourceExchangeRateProvider::new();
-        
+
         // Add multiple providers for redundancy
         multi_provider.add_provider(Box::new(CoinGeckoProvider::new()));
         multi_provider.add_provider(Box::new(BinanceProvider::new()));
-        
+
         Self { multi_provider }
     }
 }
@@ -301,7 +327,10 @@ impl ExchangeRateProvider for DefaultExchangeRateProvider {
         self.multi_provider.get_rate(currency).await
     }
 
-    async fn get_rates(&self, currencies: Vec<Currency>) -> Result<HashMap<Currency, ExchangeRate>> {
+    async fn get_rates(
+        &self,
+        currencies: Vec<Currency>,
+    ) -> Result<HashMap<Currency, ExchangeRate>> {
         self.multi_provider.get_rates(currencies).await
     }
 }
@@ -324,7 +353,7 @@ mod tests {
         let provider = CoinGeckoProvider::new();
         let rate = provider.get_rate(Currency::KES).await;
         assert!(rate.is_ok());
-        
+
         if let Ok(rate) = rate {
             assert!(rate.rate > 0.0);
             assert_eq!(rate.currency, Currency::KES);
@@ -341,7 +370,7 @@ mod tests {
             source: "Test".to_string(),
             ttl: 300, // 5 minutes
         };
-        
+
         assert!(rate.is_expired());
     }
 }

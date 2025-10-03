@@ -1,9 +1,9 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// Hardware Security Module (HSM) integration for enterprise-grade security
 #[derive(Debug)]
@@ -223,8 +223,11 @@ impl HSMClient {
         metadata: std::collections::HashMap<String, String>,
     ) -> Result<HSMKey> {
         let key_id = format!("hsm_key_{}", uuid::Uuid::new_v4());
-        
-        info!("Generating HSM key: {} with algorithm: {:?}", key_id, algorithm);
+
+        info!(
+            "Generating HSM key: {} with algorithm: {:?}",
+            key_id, algorithm
+        );
 
         // Simulate key generation
         let key = HSMKey {
@@ -232,7 +235,9 @@ impl HSMClient {
             key_type,
             algorithm,
             created_at: Utc::now(),
-            expires_at: Some(Utc::now() + chrono::Duration::days(self.config.key_rotation_interval)),
+            expires_at: Some(
+                Utc::now() + chrono::Duration::days(self.config.key_rotation_interval),
+            ),
             is_active: true,
             usage_count: 0,
             last_used: None,
@@ -326,20 +331,27 @@ impl HSMClient {
         info!("Rotating HSM key: {}", key_id);
 
         // Get current key
-        let current_key = self.get_key(key_id).await?
+        let current_key = self
+            .get_key(key_id)
+            .await?
             .ok_or_else(|| anyhow::anyhow!("Key not found: {}", key_id))?;
 
         // Generate new key with same parameters
-        let new_key = self.generate_key(
-            current_key.key_type.clone(),
-            current_key.algorithm.clone(),
-            current_key.metadata.clone(),
-        ).await?;
+        let new_key = self
+            .generate_key(
+                current_key.key_type.clone(),
+                current_key.algorithm.clone(),
+                current_key.metadata.clone(),
+            )
+            .await?;
 
         // Deactivate old key
         self.deactivate_key(key_id).await?;
 
-        info!("HSM key rotated successfully: {} -> {}", key_id, new_key.key_id);
+        info!(
+            "HSM key rotated successfully: {} -> {}",
+            key_id, new_key.key_id
+        );
         Ok(new_key)
     }
 
@@ -373,11 +385,11 @@ impl HSMClient {
         // Simple XOR encryption for simulation
         let key = b"hsm_encryption_key_32_bytes_long!";
         let mut encrypted = Vec::new();
-        
+
         for (i, &byte) in data.iter().enumerate() {
             encrypted.push(byte ^ key[i % key.len()]);
         }
-        
+
         Ok(encrypted)
     }
 
@@ -386,18 +398,18 @@ impl HSMClient {
         // Simple XOR decryption for simulation
         let key = b"hsm_encryption_key_32_bytes_long!";
         let mut decrypted = Vec::new();
-        
+
         for (i, &byte) in encrypted_data.iter().enumerate() {
             decrypted.push(byte ^ key[i % key.len()]);
         }
-        
+
         Ok(decrypted)
     }
 
     /// Simulate signing (in real implementation, this would use HSM)
     async fn simulate_signing(&self, data: &[u8]) -> Result<Vec<u8>> {
         // Simple hash-based signature for simulation
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data);
         let hash = hasher.finalize();
@@ -407,7 +419,7 @@ impl HSMClient {
     /// Simulate verification (in real implementation, this would use HSM)
     async fn simulate_verification(&self, data: &[u8], signature: &[u8]) -> Result<bool> {
         // Simple hash-based verification for simulation
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data);
         let hash = hasher.finalize();
@@ -421,13 +433,16 @@ impl HSMClient {
 
         let total_keys = keys.len();
         let active_keys = keys.iter().filter(|k| k.is_active).count();
-        let expired_keys = keys.iter().filter(|k| {
-            if let Some(expires_at) = k.expires_at {
-                expires_at < Utc::now()
-            } else {
-                false
-            }
-        }).count();
+        let expired_keys = keys
+            .iter()
+            .filter(|k| {
+                if let Some(expires_at) = k.expires_at {
+                    expires_at < Utc::now()
+                } else {
+                    false
+                }
+            })
+            .count();
 
         Ok(HSMHealthStatus {
             is_connected: connection.is_some(),
@@ -467,7 +482,7 @@ mod tests {
             retry_attempts: 3,
             key_rotation_interval: 90,
         };
-        
+
         let client = HSMClient::new(config);
         let health = client.get_health_status().await.unwrap();
         assert!(!health.is_connected);
@@ -483,17 +498,16 @@ mod tests {
             retry_attempts: 3,
             key_rotation_interval: 90,
         };
-        
+
         let client = HSMClient::new(config);
         let mut metadata = HashMap::new();
         metadata.insert("purpose".to_string(), "test".to_string());
-        
-        let key = client.generate_key(
-            HSMKeyType::EncryptionKey,
-            HSMAlgorithm::AES256,
-            metadata,
-        ).await.unwrap();
-        
+
+        let key = client
+            .generate_key(HSMKeyType::EncryptionKey, HSMAlgorithm::AES256, metadata)
+            .await
+            .unwrap();
+
         assert_eq!(key.key_type, HSMKeyType::EncryptionKey);
         assert_eq!(key.algorithm, HSMAlgorithm::AES256);
     }

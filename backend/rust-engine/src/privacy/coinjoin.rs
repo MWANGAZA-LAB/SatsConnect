@@ -1,10 +1,10 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// CoinJoin service for Bitcoin privacy enhancement
 #[derive(Debug)]
@@ -20,8 +20,8 @@ pub struct CoinJoinConfig {
     pub max_participants: u32,
     pub min_amount: u64,
     pub max_amount: u64,
-    pub round_timeout: u64, // seconds
-    pub fee_rate: u64, // sats per vbyte
+    pub round_timeout: u64,   // seconds
+    pub fee_rate: u64,        // sats per vbyte
     pub coordinator_fee: u64, // sats
     pub enable_wasabi: bool,
     pub enable_joinmarket: bool,
@@ -85,9 +85,9 @@ pub struct CoinJoinParticipant {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PrivacyLevel {
-    Low,    // 1-2 rounds
-    Medium, // 3-5 rounds
-    High,   // 6-10 rounds
+    Low,     // 1-2 rounds
+    Medium,  // 3-5 rounds
+    High,    // 6-10 rounds
     Maximum, // 10+ rounds
 }
 
@@ -111,7 +111,7 @@ impl CoinJoinService {
         privacy_level: PrivacyLevel,
     ) -> Result<String> {
         let participant_id = format!("participant_{}", uuid::Uuid::new_v4());
-        
+
         let participant = CoinJoinParticipant {
             participant_id: participant_id.clone(),
             user_id,
@@ -137,7 +137,7 @@ impl CoinJoinService {
     #[instrument(skip(self))]
     pub async fn create_round(&self, coordinator: String) -> Result<String> {
         let round_id = format!("round_{}", uuid::Uuid::new_v4());
-        
+
         let round = CoinJoinRound {
             round_id: round_id.clone(),
             participants: Vec::new(),
@@ -163,13 +163,10 @@ impl CoinJoinService {
 
     /// Join a CoinJoin round
     #[instrument(skip(self))]
-    pub async fn join_round(
-        &self,
-        round_id: &str,
-        participant_id: &str,
-    ) -> Result<bool> {
+    pub async fn join_round(&self, round_id: &str, participant_id: &str) -> Result<bool> {
         let mut rounds = self.rounds.write().await;
-        let round = rounds.iter_mut()
+        let round = rounds
+            .iter_mut()
             .find(|r| r.round_id == round_id)
             .ok_or_else(|| anyhow::anyhow!("Round not found"))?;
 
@@ -183,7 +180,8 @@ impl CoinJoinService {
 
         // Get participant
         let participants = self.participants.read().await;
-        let participant = participants.get(participant_id)
+        let participant = participants
+            .get(participant_id)
             .ok_or_else(|| anyhow::anyhow!("Participant not found"))?;
 
         if !participant.is_online {
@@ -212,7 +210,8 @@ impl CoinJoinService {
     /// Start a CoinJoin round
     async fn start_round(&self, round_id: &str) -> Result<()> {
         let mut rounds = self.rounds.write().await;
-        let round = rounds.iter_mut()
+        let round = rounds
+            .iter_mut()
             .find(|r| r.round_id == round_id)
             .ok_or_else(|| anyhow::anyhow!("Round not found"))?;
 
@@ -303,7 +302,8 @@ impl CoinJoinService {
     /// Update participant statistics after round completion
     async fn update_participant_stats(&self, round_id: &str) -> Result<()> {
         let rounds = self.rounds.read().await;
-        let round = rounds.iter()
+        let round = rounds
+            .iter()
             .find(|r| r.round_id == round_id)
             .ok_or_else(|| anyhow::anyhow!("Round not found"))?;
 
@@ -324,17 +324,25 @@ impl CoinJoinService {
         let participants = self.participants.read().await;
 
         let total_rounds = rounds.len();
-        let completed_rounds = rounds.iter().filter(|r| r.status == RoundStatus::Completed).count();
-        let active_rounds = rounds.iter().filter(|r| r.status == RoundStatus::Collecting || r.status == RoundStatus::Signing).count();
+        let completed_rounds = rounds
+            .iter()
+            .filter(|r| r.status == RoundStatus::Completed)
+            .count();
+        let active_rounds = rounds
+            .iter()
+            .filter(|r| r.status == RoundStatus::Collecting || r.status == RoundStatus::Signing)
+            .count();
         let total_participants = participants.len();
         let online_participants = participants.values().filter(|p| p.is_online).count();
 
         let total_mixed: u64 = participants.values().map(|p| p.total_mixed).sum();
         let avg_round_size = if completed_rounds > 0 {
-            rounds.iter()
+            rounds
+                .iter()
                 .filter(|r| r.status == RoundStatus::Completed)
                 .map(|r| r.participants.len())
-                .sum::<usize>() as f64 / completed_rounds as f64
+                .sum::<usize>() as f64
+                / completed_rounds as f64
         } else {
             0.0
         };
@@ -351,9 +359,13 @@ impl CoinJoinService {
     }
 
     /// Get participant privacy level
-    pub async fn get_participant_privacy_level(&self, participant_id: &str) -> Result<PrivacyLevel> {
+    pub async fn get_participant_privacy_level(
+        &self,
+        participant_id: &str,
+    ) -> Result<PrivacyLevel> {
         let participants = self.participants.read().await;
-        let participant = participants.get(participant_id)
+        let participant = participants
+            .get(participant_id)
             .ok_or_else(|| anyhow::anyhow!("Participant not found"))?;
         Ok(participant.privacy_level.clone())
     }
@@ -398,10 +410,10 @@ impl Default for CoinJoinConfig {
         Self {
             min_participants: 3,
             max_participants: 10,
-            min_amount: 10000, // 10k sats
-            max_amount: 10000000, // 10M sats
-            round_timeout: 300, // 5 minutes
-            fee_rate: 1, // 1 sat/vbyte
+            min_amount: 10000,     // 10k sats
+            max_amount: 10000000,  // 10M sats
+            round_timeout: 300,    // 5 minutes
+            fee_rate: 1,           // 1 sat/vbyte
             coordinator_fee: 1000, // 1k sats
             enable_wasabi: true,
             enable_joinmarket: true,
@@ -417,7 +429,7 @@ mod tests {
     async fn test_coinjoin_service_creation() {
         let config = CoinJoinConfig::default();
         let service = CoinJoinService::new(config);
-        
+
         let stats = service.get_coinjoin_stats().await.unwrap();
         assert_eq!(stats.total_rounds, 0);
     }
@@ -425,33 +437,27 @@ mod tests {
     #[tokio::test]
     async fn test_register_participant() {
         let service = CoinJoinService::new(CoinJoinConfig::default());
-        
-        let inputs = vec![
-            CoinJoinInput {
-                txid: "test_txid".to_string(),
-                vout: 0,
-                amount: 100000,
-                participant_id: "test".to_string(),
-                script_pubkey: "test_script".to_string(),
-            }
-        ];
-        
-        let outputs = vec![
-            CoinJoinOutput {
-                address: "test_address".to_string(),
-                amount: 95000,
-                participant_id: "test".to_string(),
-                change: false,
-            }
-        ];
-        
-        let participant_id = service.register_participant(
-            "user123".to_string(),
-            inputs,
-            outputs,
-            PrivacyLevel::Medium,
-        ).await.unwrap();
-        
+
+        let inputs = vec![CoinJoinInput {
+            txid: "test_txid".to_string(),
+            vout: 0,
+            amount: 100000,
+            participant_id: "test".to_string(),
+            script_pubkey: "test_script".to_string(),
+        }];
+
+        let outputs = vec![CoinJoinOutput {
+            address: "test_address".to_string(),
+            amount: 95000,
+            participant_id: "test".to_string(),
+            change: false,
+        }];
+
+        let participant_id = service
+            .register_participant("user123".to_string(), inputs, outputs, PrivacyLevel::Medium)
+            .await
+            .unwrap();
+
         assert!(!participant_id.is_empty());
     }
 }

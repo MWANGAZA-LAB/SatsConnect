@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SmsNotification {
@@ -38,14 +38,14 @@ impl SmsNotificationService {
 
     pub async fn send_notification(&self, notification: SmsNotification) -> Result<()> {
         info!("Sending SMS notification to: {}", notification.to);
-        
+
         // In a real implementation, this would use an SMS service like Twilio, AWS SNS, etc.
         // For now, we'll just log the notification
         info!(
             "SMS sent - To: {}, Message: {}, Provider: {:?}",
             notification.to, notification.message, notification.provider
         );
-        
+
         Ok(())
     }
 
@@ -83,7 +83,10 @@ impl SmsNotificationService {
     }
 
     pub async fn send_verification_code(&self, to: String, code: String) -> Result<()> {
-        let message = format!("Your SatsConnect verification code is: {}. This code expires in 10 minutes.", code);
+        let message = format!(
+            "Your SatsConnect verification code is: {}. This code expires in 10 minutes.",
+            code
+        );
 
         let notification = SmsNotification {
             to,
@@ -107,15 +110,15 @@ mod tests {
             api_secret: "test_secret".to_string(),
             from_number: "+1234567890".to_string(),
         };
-        
+
         let service = SmsNotificationService::new(config);
-        
+
         let notification = SmsNotification {
             to: "+1234567890".to_string(),
             message: "Test SMS message".to_string(),
             provider: SmsProvider::Twilio,
         };
-        
+
         let result = service.send_notification(notification).await;
         assert!(result.is_ok());
     }
@@ -128,15 +131,13 @@ mod tests {
             api_secret: "test_secret".to_string(),
             from_number: "+1234567890".to_string(),
         };
-        
+
         let service = SmsNotificationService::new(config);
-        
-        let result = service.send_payment_notification(
-            "+1234567890".to_string(),
-            1000,
-            true,
-        ).await;
-        
+
+        let result = service
+            .send_payment_notification("+1234567890".to_string(), 1000, true)
+            .await;
+
         assert!(result.is_ok());
     }
 }

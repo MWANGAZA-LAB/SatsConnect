@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthToken {
@@ -145,13 +145,13 @@ impl AuthenticationService {
         // Verify password
         if !self.verify_password(&password, &user.password_hash)? {
             user.failed_login_attempts += 1;
-            
+
             // Lock account if too many failed attempts
             if user.failed_login_attempts >= self.config.max_failed_attempts {
                 user.locked_until = Some(SystemTime::now() + self.config.lockout_duration);
                 warn!("Account locked for user: {}", email);
             }
-            
+
             return Ok(AuthResult::InvalidCredentials);
         }
 
@@ -161,9 +161,10 @@ impl AuthenticationService {
 
         // Generate token
         let token = self.generate_token(&user.user_id, &user.permissions)?;
-        
+
         // Store active token
-        self.active_tokens.insert(token.token.clone(), token.clone());
+        self.active_tokens
+            .insert(token.token.clone(), token.clone());
 
         // Update rate limiting
         self.update_rate_limit(&email).await;
@@ -220,7 +221,7 @@ impl AuthenticationService {
     fn generate_token(&self, user_id: &str, permissions: &[String]) -> Result<AuthToken> {
         let token = format!("token_{}_{}", user_id, uuid::Uuid::new_v4());
         let expires_at = SystemTime::now() + self.config.token_expiry_duration;
-        
+
         Ok(AuthToken {
             token,
             user_id: user_id.to_string(),
@@ -233,7 +234,8 @@ impl AuthenticationService {
     async fn is_rate_limited(&self, email: &str) -> bool {
         if let Some((count, window_start)) = self.rate_limits.get(email) {
             let now = SystemTime::now();
-            if now.duration_since(*window_start).unwrap_or_default() < self.config.rate_limit_window {
+            if now.duration_since(*window_start).unwrap_or_default() < self.config.rate_limit_window
+            {
                 *count >= self.config.rate_limit_requests
             } else {
                 false
@@ -246,7 +248,8 @@ impl AuthenticationService {
     async fn update_rate_limit(&mut self, email: &str) {
         let now = SystemTime::now();
         if let Some((count, window_start)) = self.rate_limits.get_mut(email) {
-            if now.duration_since(*window_start).unwrap_or_default() < self.config.rate_limit_window {
+            if now.duration_since(*window_start).unwrap_or_default() < self.config.rate_limit_window
+            {
                 *count += 1;
             } else {
                 *count = 1;
@@ -266,13 +269,15 @@ mod tests {
     async fn test_user_registration() {
         let config = AuthConfig::default();
         let mut auth_service = AuthenticationService::new(config);
-        
-        let result = auth_service.register_user(
-            "test@example.com".to_string(),
-            "password123".to_string(),
-            vec!["read".to_string(), "write".to_string()],
-        ).await;
-        
+
+        let result = auth_service
+            .register_user(
+                "test@example.com".to_string(),
+                "password123".to_string(),
+                vec!["read".to_string(), "write".to_string()],
+            )
+            .await;
+
         assert!(result.is_ok());
         let user_id = result.unwrap();
         assert!(!user_id.is_empty());
@@ -282,20 +287,22 @@ mod tests {
     async fn test_user_authentication() {
         let config = AuthConfig::default();
         let mut auth_service = AuthenticationService::new(config);
-        
+
         // Register user
-        auth_service.register_user(
-            "test@example.com".to_string(),
-            "password123".to_string(),
-            vec!["read".to_string()],
-        ).await.unwrap();
-        
+        auth_service
+            .register_user(
+                "test@example.com".to_string(),
+                "password123".to_string(),
+                vec!["read".to_string()],
+            )
+            .await
+            .unwrap();
+
         // Authenticate user
-        let result = auth_service.authenticate_user(
-            "test@example.com".to_string(),
-            "password123".to_string(),
-        ).await;
-        
+        let result = auth_service
+            .authenticate_user("test@example.com".to_string(), "password123".to_string())
+            .await;
+
         assert!(result.is_ok());
         match result.unwrap() {
             AuthResult::Success(token) => {
@@ -310,20 +317,22 @@ mod tests {
     async fn test_invalid_credentials() {
         let config = AuthConfig::default();
         let mut auth_service = AuthenticationService::new(config);
-        
+
         // Register user
-        auth_service.register_user(
-            "test@example.com".to_string(),
-            "password123".to_string(),
-            vec!["read".to_string()],
-        ).await.unwrap();
-        
+        auth_service
+            .register_user(
+                "test@example.com".to_string(),
+                "password123".to_string(),
+                vec!["read".to_string()],
+            )
+            .await
+            .unwrap();
+
         // Try to authenticate with wrong password
-        let result = auth_service.authenticate_user(
-            "test@example.com".to_string(),
-            "wrongpassword".to_string(),
-        ).await;
-        
+        let result = auth_service
+            .authenticate_user("test@example.com".to_string(), "wrongpassword".to_string())
+            .await;
+
         assert!(result.is_ok());
         match result.unwrap() {
             AuthResult::InvalidCredentials => {}

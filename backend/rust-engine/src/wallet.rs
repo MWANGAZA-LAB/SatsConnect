@@ -185,6 +185,8 @@ impl WalletHandler {
             .ok_or_else(|| anyhow::anyhow!("Wallet not found"))?;
 
         // Buy airtime using real Lightning engine
-        self.lightning_engine.buy_airtime(amount_sats, &phone_number, provider.as_deref()).await
+        self.lightning_engine
+            .buy_airtime(amount_sats, &phone_number, provider.as_deref())
+            .await
     }
 }

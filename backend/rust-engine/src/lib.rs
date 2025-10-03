@@ -13,21 +13,21 @@ pub mod proto {
     }
 }
 
+pub mod ai;
 pub mod bitcoin_client;
 pub mod config;
+pub mod lightning;
 pub mod lightning_engine;
+pub mod lsp;
+pub mod monitoring;
 pub mod multi_currency;
+pub mod notifications;
 pub mod payment;
 pub mod performance;
-pub mod secure_storage;
-pub mod wallet;
-pub mod monitoring;
-pub mod lightning;
-pub mod notifications;
-pub mod lsp;
-pub mod security;
-pub mod ai;
 pub mod privacy;
+pub mod secure_storage;
+pub mod security;
+pub mod wallet;
 
 #[cfg(test)]
 mod tests {

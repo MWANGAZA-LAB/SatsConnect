@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptionKey {
@@ -59,10 +59,14 @@ impl EncryptionService {
         }
     }
 
-    pub fn generate_key(&mut self, key_id: String, algorithm: Option<EncryptionAlgorithm>) -> Result<()> {
+    pub fn generate_key(
+        &mut self,
+        key_id: String,
+        algorithm: Option<EncryptionAlgorithm>,
+    ) -> Result<()> {
         let algorithm = algorithm.unwrap_or_else(|| self.default_algorithm.clone());
         let key_data = self.generate_key_data(&algorithm)?;
-        
+
         let key = EncryptionKey {
             key_id: key_id.clone(),
             key_data,
@@ -70,7 +74,7 @@ impl EncryptionService {
             created_at: chrono::Utc::now(),
             expires_at: None,
         };
-        
+
         self.keys.insert(key_id, key);
         info!("Generated encryption key: {}", key_id);
         Ok(())
@@ -82,14 +86,16 @@ impl EncryptionService {
         key_id: &str,
         algorithm: Option<EncryptionAlgorithm>,
     ) -> Result<EncryptionResult> {
-        let key = self.keys.get(key_id)
+        let key = self
+            .keys
+            .get(key_id)
             .ok_or_else(|| anyhow::anyhow!("Key not found: {}", key_id))?;
-        
+
         let algorithm = algorithm.unwrap_or_else(|| self.default_algorithm.clone());
         let iv = self.generate_iv(&algorithm)?;
-        
+
         let encrypted_data = self.encrypt_with_algorithm(data, &key.key_data, &iv, &algorithm)?;
-        
+
         Ok(EncryptionResult {
             encrypted_data,
             key_id: key_id.to_string(),
@@ -98,27 +104,31 @@ impl EncryptionService {
         })
     }
 
-    pub fn decrypt_data(
-        &self,
-        encrypted_result: &EncryptionResult,
-    ) -> Result<DecryptionResult> {
-        let key = self.keys.get(&encrypted_result.key_id)
+    pub fn decrypt_data(&self, encrypted_result: &EncryptionResult) -> Result<DecryptionResult> {
+        let key = self
+            .keys
+            .get(&encrypted_result.key_id)
             .ok_or_else(|| anyhow::anyhow!("Key not found: {}", encrypted_result.key_id))?;
-        
+
         let algorithm = match encrypted_result.algorithm.as_str() {
             "AES-256-GCM" => EncryptionAlgorithm::AES256GCM,
             "AES-256-CBC" => EncryptionAlgorithm::AES256CBC,
             "ChaCha20-Poly1305" => EncryptionAlgorithm::ChaCha20Poly1305,
-            _ => return Err(anyhow::anyhow!("Unsupported algorithm: {}", encrypted_result.algorithm)),
+            _ => {
+                return Err(anyhow::anyhow!(
+                    "Unsupported algorithm: {}",
+                    encrypted_result.algorithm
+                ))
+            }
         };
-        
+
         let decrypted_data = self.decrypt_with_algorithm(
             &encrypted_result.encrypted_data,
             &key.key_data,
             &encrypted_result.iv,
             &algorithm,
         )?;
-        
+
         Ok(DecryptionResult {
             decrypted_data,
             key_id: encrypted_result.key_id.clone(),
@@ -275,11 +285,11 @@ mod tests {
     fn test_encryption_decryption() {
         let mut service = EncryptionService::new(EncryptionAlgorithm::AES256GCM);
         service.generate_key("test_key".to_string(), None).unwrap();
-        
+
         let data = b"Hello, World!";
         let encrypted = service.encrypt_data(data, "test_key", None).unwrap();
         let decrypted = service.decrypt_data(&encrypted).unwrap();
-        
+
         assert_eq!(decrypted.decrypted_data, data);
     }
 
@@ -287,11 +297,11 @@ mod tests {
     fn test_key_rotation() {
         let mut service = EncryptionService::new(EncryptionAlgorithm::AES256GCM);
         service.generate_key("test_key".to_string(), None).unwrap();
-        
+
         let original_key = service.get_key("test_key").unwrap().key_data.clone();
         service.rotate_key("test_key").unwrap();
         let rotated_key = service.get_key("test_key").unwrap().key_data.clone();
-        
+
         assert_ne!(original_key, rotated_key);
     }
 }

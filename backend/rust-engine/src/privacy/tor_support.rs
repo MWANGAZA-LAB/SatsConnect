@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TorConfig {
@@ -69,23 +69,26 @@ impl TorClient {
     }
 
     pub async fn start(&self) -> Result<()> {
-        info!("Starting Tor client with SOCKS proxy: {}", self.config.socks_proxy);
-        
+        info!(
+            "Starting Tor client with SOCKS proxy: {}",
+            self.config.socks_proxy
+        );
+
         // In a real implementation, this would start the Tor daemon
         // For now, we'll just simulate the startup
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         info!("Tor client started successfully");
         Ok(())
     }
 
     pub async fn stop(&self) -> Result<()> {
         info!("Stopping Tor client");
-        
+
         // Close all connections
         let mut connections = self.connections.write().await;
         connections.clear();
-        
+
         info!("Tor client stopped");
         Ok(())
     }
@@ -93,7 +96,7 @@ impl TorClient {
     pub async fn create_connection(&self) -> Result<String> {
         let connection_id = format!("conn_{}", uuid::Uuid::new_v4());
         let circuit_id = format!("circuit_{}", uuid::Uuid::new_v4());
-        
+
         let connection = TorConnection {
             connection_id: connection_id.clone(),
             circuit_id,
@@ -101,57 +104,70 @@ impl TorClient {
             created_at: chrono::Utc::now(),
             last_used: chrono::Utc::now(),
         };
-        
+
         let mut connections = self.connections.write().await;
         connections.push(connection);
-        
+
         // Update stats
         let mut stats = self.stats.write().await;
         stats.total_connections += 1;
         stats.active_connections += 1;
         stats.circuits_created += 1;
-        
+
         info!("Created Tor connection: {}", connection_id);
         Ok(connection_id)
     }
 
     pub async fn close_connection(&self, connection_id: &str) -> Result<()> {
         let mut connections = self.connections.write().await;
-        if let Some(connection) = connections.iter_mut().find(|c| c.connection_id == connection_id) {
+        if let Some(connection) = connections
+            .iter_mut()
+            .find(|c| c.connection_id == connection_id)
+        {
             connection.is_active = false;
-            
+
             // Update stats
             let mut stats = self.stats.write().await;
             stats.active_connections = stats.active_connections.saturating_sub(1);
         }
-        
+
         info!("Closed Tor connection: {}", connection_id);
         Ok(())
     }
 
     pub async fn make_request(&self, connection_id: &str, url: &str) -> Result<String> {
         let mut connections = self.connections.write().await;
-        let connection = connections.iter_mut()
+        let connection = connections
+            .iter_mut()
             .find(|c| c.connection_id == connection_id)
             .ok_or_else(|| anyhow::anyhow!("Connection not found: {}", connection_id))?;
-        
+
         if !connection.is_active {
-            return Err(anyhow::anyhow!("Connection is not active: {}", connection_id));
+            return Err(anyhow::anyhow!(
+                "Connection is not active: {}",
+                connection_id
+            ));
         }
-        
+
         connection.last_used = chrono::Utc::now();
-        
+
         // Simulate Tor request
         let start = std::time::Instant::now();
-        tokio::time::sleep(tokio::time::Duration::from_millis(100 + rand::random::<u64>() % 200)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(
+            100 + rand::random::<u64>() % 200,
+        ))
+        .await;
         let latency = start.elapsed().as_millis() as f64;
-        
+
         // Update stats
         let mut stats = self.stats.write().await;
         stats.bytes_transferred += url.len() as u64;
         stats.average_latency_ms = (stats.average_latency_ms + latency) / 2.0;
-        
-        info!("Made Tor request to {} via connection {}", url, connection_id);
+
+        info!(
+            "Made Tor request to {} via connection {}",
+            url, connection_id
+        );
         Ok(format!("Response from {}", url))
     }
 
@@ -162,7 +178,8 @@ impl TorClient {
 
     pub async fn get_active_connections(&self) -> Vec<TorConnection> {
         let connections = self.connections.read().await;
-        connections.iter()
+        connections
+            .iter()
             .filter(|c| c.is_active)
             .cloned()
             .collect()
@@ -175,33 +192,36 @@ impl TorClient {
 
     pub async fn renew_circuit(&self, connection_id: &str) -> Result<()> {
         let mut connections = self.connections.write().await;
-        if let Some(connection) = connections.iter_mut().find(|c| c.connection_id == connection_id) {
+        if let Some(connection) = connections
+            .iter_mut()
+            .find(|c| c.connection_id == connection_id)
+        {
             connection.circuit_id = format!("circuit_{}", uuid::Uuid::new_v4());
             connection.last_used = chrono::Utc::now();
-            
+
             // Update stats
             let mut stats = self.stats.write().await;
             stats.circuits_created += 1;
         }
-        
+
         info!("Renewed circuit for connection: {}", connection_id);
         Ok(())
     }
 
     pub async fn cleanup_old_connections(&self, max_age_hours: u64) -> Result<usize> {
         let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(max_age_hours as i64);
-        
+
         let mut connections = self.connections.write().await;
         let initial_count = connections.len();
-        
+
         connections.retain(|c| c.last_used > cutoff_time);
-        
+
         let removed_count = initial_count - connections.len();
-        
+
         // Update stats
         let mut stats = self.stats.write().await;
         stats.active_connections = connections.iter().filter(|c| c.is_active).count();
-        
+
         info!("Cleaned up {} old Tor connections", removed_count);
         Ok(removed_count)
     }
@@ -215,7 +235,7 @@ mod tests {
     async fn test_tor_client_creation() {
         let config = TorConfig::default();
         let client = TorClient::new(config);
-        
+
         let stats = client.get_stats().await;
         assert_eq!(stats.total_connections, 0);
     }
@@ -224,10 +244,10 @@ mod tests {
     async fn test_create_connection() {
         let config = TorConfig::default();
         let client = TorClient::new(config);
-        
+
         let connection_id = client.create_connection().await.unwrap();
         assert!(!connection_id.is_empty());
-        
+
         let connections = client.get_connections().await;
         assert_eq!(connections.len(), 1);
     }
@@ -236,10 +256,13 @@ mod tests {
     async fn test_make_request() {
         let config = TorConfig::default();
         let client = TorClient::new(config);
-        
+
         let connection_id = client.create_connection().await.unwrap();
-        let response = client.make_request(&connection_id, "https://example.com").await.unwrap();
-        
+        let response = client
+            .make_request(&connection_id, "https://example.com")
+            .await
+            .unwrap();
+
         assert!(response.contains("example.com"));
     }
 
@@ -247,10 +270,10 @@ mod tests {
     async fn test_connection_cleanup() {
         let config = TorConfig::default();
         let client = TorClient::new(config);
-        
+
         // Create a connection
         client.create_connection().await.unwrap();
-        
+
         // Clean up connections older than 0 hours (should remove all)
         let removed = client.cleanup_old_connections(0).await.unwrap();
         assert_eq!(removed, 1);

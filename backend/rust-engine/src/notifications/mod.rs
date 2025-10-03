@@ -1,7 +1,7 @@
-pub mod push_notifications;
 pub mod email_notifications;
+pub mod push_notifications;
 pub mod sms_notifications;
 
-pub use push_notifications::{PushNotificationService, PushNotification, NotificationType};
-pub use email_notifications::{EmailNotificationService, EmailNotification, EmailTemplate};
-pub use sms_notifications::{SmsNotificationService, SmsNotification, SmsProvider};
+pub use email_notifications::{EmailNotification, EmailNotificationService, EmailTemplate};
+pub use push_notifications::{NotificationType, PushNotification, PushNotificationService};
+pub use sms_notifications::{SmsNotification, SmsNotificationService, SmsProvider};

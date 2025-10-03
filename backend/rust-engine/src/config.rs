@@ -130,7 +130,7 @@ impl LightningConfig {
 
         Ok(config)
     }
-    
+
     /// Get the default data directory
     fn default_data_dir() -> PathBuf {
         if let Some(dirs) = directories::ProjectDirs::from("com", "SatsConnect", "engine") {
@@ -139,7 +139,7 @@ impl LightningConfig {
             PathBuf::from("./data")
         }
     }
-    
+
     /// Get the default Esplora URL based on network
     fn default_esplora_url() -> String {
         match env::var("BITCOIN_NETWORK")
@@ -154,7 +154,7 @@ impl LightningConfig {
             _ => "https://blockstream.info/testnet/api".to_string(),
         }
     }
-    
+
     /// Validate the configuration
     pub fn validate(&self) -> Result<()> {
         // Ensure data directory exists
@@ -193,7 +193,7 @@ impl LightningConfig {
                 }
             }
         }
-        
+
         // Validate Lightning node configuration
         if self.lightning_node.min_channel_size >= self.lightning_node.max_channel_size {
             return Err(anyhow::anyhow!(

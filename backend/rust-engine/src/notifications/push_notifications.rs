@@ -1,10 +1,10 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn, instrument};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, instrument, warn};
 
 /// Push notification service for real-time payment updates
 #[derive(Debug)]
@@ -83,15 +83,20 @@ impl PushNotificationService {
         Self {
             notification_channels: Arc::new(RwLock::new(HashMap::new())),
             fcm_config: FCMConfig {
-                server_key: std::env::var("FCM_SERVER_KEY").unwrap_or_else(|_| "test_key".to_string()),
-                project_id: std::env::var("FCM_PROJECT_ID").unwrap_or_else(|_| "test_project".to_string()),
+                server_key: std::env::var("FCM_SERVER_KEY")
+                    .unwrap_or_else(|_| "test_key".to_string()),
+                project_id: std::env::var("FCM_PROJECT_ID")
+                    .unwrap_or_else(|_| "test_project".to_string()),
                 base_url: "https://fcm.googleapis.com/v1/projects".to_string(),
             },
             apns_config: APNSConfig {
                 key_id: std::env::var("APNS_KEY_ID").unwrap_or_else(|_| "test_key_id".to_string()),
-                team_id: std::env::var("APNS_TEAM_ID").unwrap_or_else(|_| "test_team_id".to_string()),
-                bundle_id: std::env::var("APNS_BUNDLE_ID").unwrap_or_else(|_| "com.satsconnect.app".to_string()),
-                private_key: std::env::var("APNS_PRIVATE_KEY").unwrap_or_else(|_| "test_key".to_string()),
+                team_id: std::env::var("APNS_TEAM_ID")
+                    .unwrap_or_else(|_| "test_team_id".to_string()),
+                bundle_id: std::env::var("APNS_BUNDLE_ID")
+                    .unwrap_or_else(|_| "com.satsconnect.app".to_string()),
+                private_key: std::env::var("APNS_PRIVATE_KEY")
+                    .unwrap_or_else(|_| "test_key".to_string()),
                 base_url: "https://api.push.apple.com".to_string(),
             },
         }
@@ -117,7 +122,10 @@ impl PushNotificationService {
         let mut channels = self.notification_channels.write().await;
         channels.insert(device_token, channel);
 
-        info!("Registered device for user: {} on platform: {:?}", user_id, platform);
+        info!(
+            "Registered device for user: {} on platform: {:?}",
+            user_id, platform
+        );
         Ok(())
     }
 
@@ -140,17 +148,30 @@ impl PushNotificationService {
             .collect();
 
         if user_channels.is_empty() {
-            warn!("No active notification channels found for user: {}", user_id);
+            warn!(
+                "No active notification channels found for user: {}",
+                user_id
+            );
             return Ok(());
         }
 
         for channel in user_channels {
-            if let Err(e) = self.send_to_device(&channel.device_token, &payload, &channel.platform).await {
-                error!("Failed to send notification to device {}: {}", channel.device_token, e);
+            if let Err(e) = self
+                .send_to_device(&channel.device_token, &payload, &channel.platform)
+                .await
+            {
+                error!(
+                    "Failed to send notification to device {}: {}",
+                    channel.device_token, e
+                );
             }
         }
 
-        info!("Sent notification to {} devices for user: {}", user_channels.len(), user_id);
+        info!(
+            "Sent notification to {} devices for user: {}",
+            user_channels.len(),
+            user_id
+        );
         Ok(())
     }
 
@@ -169,7 +190,11 @@ impl PushNotificationService {
     }
 
     /// Send FCM notification for Android
-    async fn send_fcm_notification(&self, device_token: &str, payload: &NotificationPayload) -> Result<()> {
+    async fn send_fcm_notification(
+        &self,
+        device_token: &str,
+        payload: &NotificationPayload,
+    ) -> Result<()> {
         let fcm_payload = serde_json::json!({
             "message": {
                 "token": device_token,
@@ -190,11 +215,17 @@ impl PushNotificationService {
         });
 
         let client = reqwest::Client::new();
-        let url = format!("{}/{}/messages:send", self.fcm_config.base_url, self.fcm_config.project_id);
-        
+        let url = format!(
+            "{}/{}/messages:send",
+            self.fcm_config.base_url, self.fcm_config.project_id
+        );
+
         let response = client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", self.fcm_config.server_key))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.fcm_config.server_key),
+            )
             .header("Content-Type", "application/json")
             .json(&fcm_payload)
             .send()
@@ -210,7 +241,11 @@ impl PushNotificationService {
     }
 
     /// Send APNS notification for iOS
-    async fn send_apns_notification(&self, device_token: &str, payload: &NotificationPayload) -> Result<()> {
+    async fn send_apns_notification(
+        &self,
+        device_token: &str,
+        payload: &NotificationPayload,
+    ) -> Result<()> {
         let apns_payload = serde_json::json!({
             "aps": {
                 "alert": {
@@ -226,7 +261,7 @@ impl PushNotificationService {
 
         let client = reqwest::Client::new();
         let url = format!("{}/3/device/{}", self.apns_config.base_url, device_token);
-        
+
         let response = client
             .post(&url)
             .header("apns-topic", &self.apns_config.bundle_id)
@@ -246,10 +281,17 @@ impl PushNotificationService {
     }
 
     /// Send web notification
-    async fn send_web_notification(&self, device_token: &str, payload: &NotificationPayload) -> Result<()> {
+    async fn send_web_notification(
+        &self,
+        device_token: &str,
+        payload: &NotificationPayload,
+    ) -> Result<()> {
         // Web notifications are typically handled by the frontend
         // This would integrate with Web Push API or similar
-        info!("Web notification sent to: {} - {}", device_token, payload.title);
+        info!(
+            "Web notification sent to: {} - {}",
+            device_token, payload.title
+        );
         Ok(())
     }
 
@@ -282,7 +324,11 @@ impl PushNotificationService {
     ) -> NotificationPayload {
         NotificationPayload {
             title: "Payment Received! 🎉".to_string(),
-            body: format!("You received {} sats from {}", amount_sats, &from_address[..8]),
+            body: format!(
+                "You received {} sats from {}",
+                amount_sats,
+                &from_address[..8]
+            ),
             data: {
                 let mut data = HashMap::new();
                 data.insert("type".to_string(), "payment_received".to_string());
@@ -349,13 +395,15 @@ impl PushNotificationService {
     /// Get notification statistics
     pub async fn get_notification_stats(&self) -> Result<NotificationStats> {
         let channels = self.notification_channels.read().await;
-        
+
         let total_devices = channels.len();
         let active_devices = channels.values().filter(|c| c.is_active).count();
-        
+
         let mut devices_by_platform = HashMap::new();
         for channel in channels.values() {
-            *devices_by_platform.entry(channel.platform.clone()).or_insert(0) += 1;
+            *devices_by_platform
+                .entry(channel.platform.clone())
+                .or_insert(0) += 1;
         }
 
         Ok(NotificationStats {
@@ -387,13 +435,16 @@ mod tests {
     #[tokio::test]
     async fn test_push_notification_service() {
         let service = PushNotificationService::new();
-        
-        service.register_device(
-            "user123".to_string(),
-            "device_token_123".to_string(),
-            Platform::Android,
-        ).await.unwrap();
-        
+
+        service
+            .register_device(
+                "user123".to_string(),
+                "device_token_123".to_string(),
+                Platform::Android,
+            )
+            .await
+            .unwrap();
+
         let stats = service.get_notification_stats().await.unwrap();
         assert_eq!(stats.total_devices, 1);
         assert_eq!(stats.active_devices, 1);
@@ -402,12 +453,9 @@ mod tests {
     #[test]
     fn test_notification_payload_creation() {
         let service = PushNotificationService::new();
-        let payload = service.create_payment_received_notification(
-            1000,
-            "test_address",
-            "test_hash",
-        );
-        
+        let payload =
+            service.create_payment_received_notification(1000, "test_address", "test_hash");
+
         assert_eq!(payload.title, "Payment Received! 🎉");
         assert_eq!(payload.notification_type, NotificationType::PaymentReceived);
         assert_eq!(payload.priority, NotificationPriority::High);

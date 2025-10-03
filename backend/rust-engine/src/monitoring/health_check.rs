@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, warn};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HealthStatus {
@@ -118,13 +118,13 @@ impl DatabaseHealthCheck {
 impl HealthCheckProvider for DatabaseHealthCheck {
     async fn check_health(&self) -> Result<HealthCheck> {
         let start = std::time::Instant::now();
-        
+
         // Simulate database health check
         // In a real implementation, this would check database connectivity
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-        
+
         let duration = start.elapsed().as_millis() as u64;
-        
+
         Ok(HealthCheck {
             name: "database".to_string(),
             status: HealthStatus::Healthy,
@@ -154,13 +154,13 @@ impl LightningHealthCheck {
 impl HealthCheckProvider for LightningHealthCheck {
     async fn check_health(&self) -> Result<HealthCheck> {
         let start = std::time::Instant::now();
-        
+
         // Simulate Lightning Network health check
         // In a real implementation, this would check Lightning node status
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        
+
         let duration = start.elapsed().as_millis() as u64;
-        
+
         Ok(HealthCheck {
             name: "lightning".to_string(),
             status: HealthStatus::Healthy,
@@ -190,13 +190,13 @@ impl ApiHealthCheck {
 impl HealthCheckProvider for ApiHealthCheck {
     async fn check_health(&self) -> Result<HealthCheck> {
         let start = std::time::Instant::now();
-        
+
         // Simulate API health check
         // In a real implementation, this would make an HTTP request
         tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-        
+
         let duration = start.elapsed().as_millis() as u64;
-        
+
         Ok(HealthCheck {
             name: "api".to_string(),
             status: HealthStatus::Healthy,
@@ -218,15 +218,15 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker() {
         let checker = HealthChecker::new();
-        
+
         let db_check = Box::new(DatabaseHealthCheck::new("test://db".to_string()));
         let lightning_check = Box::new(LightningHealthCheck::new("test://lightning".to_string()));
-        
+
         checker.add_check(db_check).await;
         checker.add_check(lightning_check).await;
-        
+
         let system_health = checker.run_health_checks().await;
-        
+
         assert_eq!(system_health.overall_status, HealthStatus::Healthy);
         assert_eq!(system_health.checks.len(), 2);
     }
@@ -235,7 +235,7 @@ mod tests {
     async fn test_database_health_check() {
         let db_check = DatabaseHealthCheck::new("test://db".to_string());
         let result = db_check.check_health().await;
-        
+
         assert!(result.is_ok());
         let health = result.unwrap();
         assert_eq!(health.name, "database");
